@@ -342,77 +342,142 @@ export default function Home() {
 
     setHeroesInBattle(updatedHeroes);
 
-    setBattleState(prev => {
-      const updatedState = {
-        ...prev,
-        soldiers: newSoldiers,
-        currentTurn: prev.currentTurn + 1,
-        battleLog: newBattleLog.slice(-5)
-      };
-
-      if (newSoldiers.every(health => health <= 0)) {
-        const experienceGained = newCurrentLevel;
-        
-        const updatedHeroesWithExp = { ...updatedHeroes };
-        const levelUpMessages: string[] = [];
-        
-        Object.keys(updatedHeroesWithExp).forEach(heroName => {
-          const hero = updatedHeroesWithExp[heroName];
-          const newExperience = hero.experience + experienceGained;
-          let newLevel = hero.level;
-          let newMaxHealth = hero.maxHealth;
-          let newAttackPower = hero.attackPower;
-          let newExperienceToNextLevel = hero.experienceToNextLevel || 10;
-          
-          if (newExperience >= newExperienceToNextLevel) {
-            newLevel = hero.level + 1;
-            newMaxHealth = hero.maxHealth + 20;
-            newAttackPower = hero.attackPower + 5;
-            newExperienceToNextLevel = Math.floor(newExperienceToNextLevel * 1.5);
-            levelUpMessages.push(`${heroName} leveled up to Level ${newLevel}!`);
-          }
-          
-          updatedHeroesWithExp[heroName] = {
-            ...hero,
-            level: newLevel,
-            maxHealth: newMaxHealth,
-            attackPower: newAttackPower,
-            health: newMaxHealth,
-            experience: newExperience,
-            experienceToNextLevel: newExperienceToNextLevel
+            setBattleState(prev => {
+          const updatedState = {
+            ...prev,
+            soldiers: newSoldiers,
+            currentTurn: prev.currentTurn + 1,
+            battleLog: newBattleLog.slice(-5)
           };
-        });
-        
-        setHeroesInBattle(updatedHeroesWithExp);
-        
-        setHeroProgress(prev => {
-          const newProgress = { ...prev };
-          Object.keys(updatedHeroesWithExp).forEach(heroName => {
-            const hero = updatedHeroesWithExp[heroName];
-            newProgress[heroName] = {
-              level: hero.level,
-              experience: hero.experience,
-              experienceToNextLevel: hero.experienceToNextLevel,
-              maxHealth: hero.maxHealth,
-              attackPower: hero.attackPower
-            };
-          });
-          return newProgress;
-        });
-        
-        const soldierCount = newCurrentLevel;
-        
-        setBattleState(prev => ({
-          ...prev,
-          soldiers: Array(soldierCount).fill(100),
-          battleLog: [...prev.battleLog.slice(-3), `Gained ${experienceGained} EXP!`, ...levelUpMessages]
-        }));
-        
-        return updatedState;
-      }
 
-      return updatedState;
-    });
+          if (newSoldiers.every(health => health <= 0)) {
+            const experienceGained = newCurrentLevel;
+            
+            const updatedHeroesWithExp = { ...updatedHeroes };
+            const levelUpMessages: string[] = [];
+            const lootMessages: string[] = [];
+            
+            // Loot dropping system
+            const dropRates = {
+              common: 0.4,    // 40% chance for common
+              rare: 0.25,     // 25% chance for rare
+              epic: 0.15,     // 15% chance for epic
+              legendary: 0.1, // 10% chance for legendary
+              mythic: 0.05    // 5% chance for mythic
+            };
+            
+            // Determine if any loot drops (higher chance at higher levels)
+            const baseDropChance = 0.3 + (newCurrentLevel * 0.05); // 30% base + 5% per level
+            const shouldDropLoot = Math.random() < Math.min(baseDropChance, 0.8); // Cap at 80%
+            
+            if (shouldDropLoot && recruitedGenerals.length > 0) {
+              // Determine rarity based on drop rates
+              const rarityRoll = Math.random();
+              let selectedRarity: 'common' | 'rare' | 'epic' | 'legendary' | 'mythic' = 'common';
+              
+              if (rarityRoll < dropRates.mythic) {
+                selectedRarity = 'mythic';
+              } else if (rarityRoll < dropRates.mythic + dropRates.legendary) {
+                selectedRarity = 'legendary';
+              } else if (rarityRoll < dropRates.mythic + dropRates.legendary + dropRates.epic) {
+                selectedRarity = 'epic';
+              } else if (rarityRoll < dropRates.mythic + dropRates.legendary + dropRates.epic + dropRates.rare) {
+                selectedRarity = 'rare';
+              }
+              
+              // Filter gear by selected rarity
+              const availableGear = gearData.filter(item => item.rarity === selectedRarity);
+              
+              if (availableGear.length > 0) {
+                const droppedItem = availableGear[Math.floor(Math.random() * availableGear.length)];
+                const randomHero = recruitedGenerals[Math.floor(Math.random() * recruitedGenerals.length)];
+                
+                // Add item to hero's inventory
+                setHeroInventories(prev => ({
+                  ...prev,
+                  [randomHero]: [...(prev[randomHero] || []), droppedItem]
+                }));
+                
+                const rarityColor = 
+                  selectedRarity === 'common' ? 'gray' :
+                  selectedRarity === 'rare' ? 'blue' :
+                  selectedRarity === 'epic' ? 'purple' :
+                  selectedRarity === 'legendary' ? 'yellow' :
+                  'purple';
+                
+                lootMessages.push(`🎁 ${randomHero} found ${droppedItem.name} (${selectedRarity})!`);
+              }
+            }
+            
+            Object.keys(updatedHeroesWithExp).forEach(heroName => {
+              const hero = updatedHeroesWithExp[heroName];
+              const newExperience = hero.experience + experienceGained;
+              let newLevel = hero.level;
+              let newMaxHealth = hero.maxHealth;
+              let newAttackPower = hero.attackPower;
+              let newExperienceToNextLevel = hero.experienceToNextLevel || 10;
+              
+              if (newExperience >= newExperienceToNextLevel) {
+                newLevel = hero.level + 1;
+                newMaxHealth = hero.maxHealth + 20;
+                newAttackPower = hero.attackPower + 5;
+                newExperienceToNextLevel = Math.floor(newExperienceToNextLevel * 1.5);
+                levelUpMessages.push(`${heroName} leveled up to Level ${newLevel}!`);
+              }
+              
+              updatedHeroesWithExp[heroName] = {
+                ...hero,
+                level: newLevel,
+                maxHealth: newMaxHealth,
+                attackPower: newAttackPower,
+                health: newMaxHealth,
+                experience: newExperience,
+                experienceToNextLevel: newExperienceToNextLevel
+              };
+            });
+            
+            setHeroesInBattle(updatedHeroesWithExp);
+            
+            setHeroProgress(prev => {
+              const newProgress = { ...prev };
+              Object.keys(updatedHeroesWithExp).forEach(heroName => {
+                const hero = updatedHeroesWithExp[heroName];
+                newProgress[heroName] = {
+                  level: hero.level,
+                  experience: hero.experience,
+                  experienceToNextLevel: hero.experienceToNextLevel,
+                  maxHealth: hero.maxHealth,
+                  attackPower: hero.attackPower
+                };
+              });
+              return newProgress;
+            });
+            
+            // Respawn enemies at the same level instead of progressing
+            let soldierCount: number;
+            let soldierHP: number;
+            
+            if (newCurrentLevel <= 5) {
+              // Levels 1-5: Number of enemies equals level
+              soldierCount = newCurrentLevel;
+              soldierHP = 100;
+            } else {
+              // Level 6+: Keep 5 enemies but HP scales with level
+              soldierCount = 5;
+              soldierHP = 100 * Math.pow(2, newCurrentLevel - 5);
+            }
+            
+            setBattleState(prev => ({
+              ...prev,
+              soldiers: Array(soldierCount).fill(soldierHP),
+              battleLog: [...prev.battleLog.slice(-3), `Gained ${experienceGained} EXP!`, ...levelUpMessages, ...lootMessages, `Enemies respawned!`]
+            }));
+            
+            return updatedState;
+          }
+
+          return updatedState;
+        });
   }, []);
 
   const startBattle = () => {
@@ -690,6 +755,39 @@ export default function Home() {
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
+                  onClick={() => {
+                    const nextLevel = battleState.currentLevel + 1;
+                    let soldierCount: number;
+                    let soldierHP: number;
+                    
+                    if (nextLevel <= 5) {
+                      soldierCount = nextLevel;
+                      soldierHP = 100;
+                    } else {
+                      soldierCount = 5;
+                      soldierHP = 100 * Math.pow(2, nextLevel - 5);
+                    }
+                    
+                    setBattleState(prev => ({
+                      ...prev,
+                      currentLevel: nextLevel,
+                      soldiers: Array(soldierCount).fill(soldierHP),
+                      battleLog: [`Level ${nextLevel} started! ${soldierCount} 黄巾军 (${soldierHP} HP each)`]
+                    }));
+                  }}
+                  disabled={battleState.isActive}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    battleState.isActive
+                      ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                      : 'bg-purple-600 hover:bg-purple-700 text-white'
+                  }`}
+                >
+                  Next Level ({battleState.currentLevel + 1})
+                </motion.button>
+                
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                   onClick={() => setCurrentScreen('city')}
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium"
                 >
@@ -786,6 +884,25 @@ export default function Home() {
                             ></div>
                           </div>
                         </div>
+
+                        {/* Equipped Gear */}
+                        <div className="space-y-1">
+                          <div className="text-xs text-gray-400">Equipment:</div>
+                          <div className="flex gap-1">
+                            <div className="flex-1 bg-gray-600/30 rounded p-1 text-center">
+                              <div className="text-xs text-gray-400">⚔️</div>
+                              <div className="text-white text-xs truncate">
+                                {heroEquippedGear[heroName]?.weapon?.name || 'None'}
+                              </div>
+                            </div>
+                            <div className="flex-1 bg-gray-600/30 rounded p-1 text-center">
+                              <div className="text-xs text-gray-400">🛡️</div>
+                              <div className="text-white text-xs truncate">
+                                {heroEquippedGear[heroName]?.armor?.name || 'None'}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -843,23 +960,151 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Battle Log */}
-            <div className="bg-gray-800/90 rounded-lg p-4">
-              <h3 className="text-lg font-bold text-white mb-3">Battle Log</h3>
-              <div className="bg-gray-900 rounded-lg p-3 h-24 overflow-y-auto">
-                <AnimatePresence>
-                  {battleState.battleLog.map((log, index) => (
-                    <motion.div
-                      key={index}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 20 }}
-                      className="text-gray-300 text-sm mb-1"
-                    >
-                      {log}
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
+
+
+            {/* Battle Log and Inventory */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* Battle Log */}
+              <div className="bg-gray-800/90 rounded-lg p-4">
+                <h3 className="text-lg font-bold text-white mb-3">Battle Log</h3>
+                <div className="bg-gray-900 rounded-lg p-3 h-24 overflow-y-auto">
+                  <AnimatePresence>
+                    {battleState.battleLog.map((log, index) => (
+                      <motion.div
+                        key={index}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 20 }}
+                        className="text-gray-300 text-sm mb-1"
+                      >
+                        {log}
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                </div>
+              </div>
+
+              {/* Dropped Gear */}
+              <div className="bg-gray-800/90 rounded-lg p-4">
+                <h3 className="text-lg font-bold text-white mb-3">Dropped Gear</h3>
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {recruitedGenerals.map((heroName) => {
+                    const heroInventory = heroInventories[heroName] || [];
+                    const heroEquipped = heroEquippedGear[heroName] || { weapon: null, armor: null };
+                    
+                    return (
+                      <div key={heroName} className="bg-gray-700/50 rounded-lg p-3 border border-gray-600">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm overflow-hidden border border-gray-500">
+                            {heroName === '刘备' ? (
+                              <img 
+                                src="/liubei.png" 
+                                alt={heroName}
+                                className="w-full h-full object-cover rounded-full"
+                              />
+                            ) : heroName === '诸葛亮' ? (
+                              <img 
+                                src="/zhugeliang.png" 
+                                alt={heroName}
+                                className="w-full h-full object-cover rounded-full"
+                              />
+                            ) : heroName === '关羽' ? (
+                              <img 
+                                src="/guanyu.png" 
+                                alt={heroName}
+                                className="w-full h-full object-cover rounded-full"
+                              />
+                            ) : heroName === '张飞' ? (
+                              <img 
+                                src="/caocao.png" 
+                                alt={heroName}
+                                className="w-full h-full object-cover rounded-full"
+                              />
+                            ) : (
+                              '👤'
+                            )}
+                          </div>
+                          <h4 className="text-white font-semibold text-sm">{heroName}</h4>
+                          <span className="text-gray-400 text-xs">({heroInventory.length} items)</span>
+                        </div>
+
+
+
+                        {/* Dropped Gear */}
+                        <div className="space-y-1">
+                          <div className="text-xs text-gray-400">Dropped Gear:</div>
+                          <div className="grid grid-cols-2 gap-1">
+                            {heroInventory.map((item, index) => {
+                              const rarityColor = 
+                                item.rarity === 'common' ? 'text-gray-400' :
+                                item.rarity === 'rare' ? 'text-blue-400' :
+                                item.rarity === 'epic' ? 'text-purple-400' :
+                                item.rarity === 'legendary' ? 'text-yellow-400' :
+                                'text-purple-400';
+                              
+                              const isEquipped = 
+                                (heroEquipped.weapon?.id === item.id) || 
+                                (heroEquipped.armor?.id === item.id);
+
+                              return (
+                                <motion.button
+                                  key={`${heroName}-${item.id}-${index}`}
+                                  whileHover={{ scale: 1.02 }}
+                                  whileTap={{ scale: 0.98 }}
+                                  onClick={() => {
+                                    const newEquippedGear = { ...heroEquippedGear };
+                                    
+                                    if (item.type === 'weapon') {
+                                      newEquippedGear[heroName] = {
+                                        ...newEquippedGear[heroName],
+                                        weapon: item
+                                      };
+                                    } else if (item.type === 'armor') {
+                                      newEquippedGear[heroName] = {
+                                        ...newEquippedGear[heroName],
+                                        armor: item
+                                      };
+                                    }
+                                    
+                                    setHeroEquippedGear(newEquippedGear);
+                                    setSellMessage(`${heroName} equipped ${item.name}!`);
+                                    setTimeout(() => setSellMessage(''), 3000);
+                                  }}
+                                  disabled={isEquipped}
+                                  className={`text-left p-2 rounded text-xs transition-all ${
+                                    isEquipped 
+                                      ? 'bg-green-600/50 text-green-200 cursor-not-allowed border border-green-500'
+                                      : 'bg-gray-600/50 hover:bg-gray-600 text-white border border-gray-500 hover:border-gray-400'
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-1 mb-1">
+                                    <span>{item.type === 'weapon' ? '⚔️' : '🛡️'}</span>
+                                    <span className={`font-medium ${rarityColor}`}>
+                                      {item.rarity.charAt(0).toUpperCase()}
+                                    </span>
+                                  </div>
+                                  <div className="font-medium truncate">{item.name}</div>
+                                  <div className="text-gray-400 text-xs">
+                                    {item.attackBonus > 0 && `+${item.attackBonus} ATK `}
+                                    {item.healthBonus > 0 && `+${item.healthBonus} HP`}
+                                  </div>
+                                  {isEquipped && (
+                                    <div className="text-green-400 text-xs font-bold">EQUIPPED</div>
+                                  )}
+                                </motion.button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                        {heroInventory.length === 0 && (
+                          <div className="text-gray-500 text-xs text-center py-2">
+                            No gear dropped yet
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </div>
@@ -879,6 +1124,119 @@ export default function Home() {
                 {sellMessage}
               </motion.div>
             )}
+
+            {/* Resources Display */}
+            <div className="bg-gray-800/90 rounded-lg p-4 mb-4">
+              <h2 className="text-lg font-bold text-white mb-3">Your Resources</h2>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="text-center">
+                  <div className="text-xl">💰</div>
+                  <div className="text-yellow-400 font-bold text-sm">{resources.gold}</div>
+                  <div className="text-gray-400 text-xs">Gold</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-xl">🍖</div>
+                  <div className="text-green-400 font-bold text-sm">{resources.food}</div>
+                  <div className="text-gray-400 text-xs">Food</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-xl">👥</div>
+                  <div className="text-blue-400 font-bold text-sm">{resources.population}</div>
+                  <div className="text-gray-400 text-xs">Population</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Shop Items */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+              {gearData
+                .filter(item => item.rarity === 'legendary' || item.rarity === 'mythic')
+                .map((item) => {
+                  const cost = item.rarity === 'legendary' ? 5000 : 10000;
+                  const rarityColor = item.rarity === 'legendary' ? 'text-yellow-400' : 'text-purple-400';
+                  const rarityBg = item.rarity === 'legendary' ? 'bg-yellow-900/20' : 'bg-purple-900/20';
+                  
+                  return (
+                    <motion.div
+                      key={item.id}
+                      whileHover={{ scale: 1.02 }}
+                      className={`bg-gray-800/90 rounded-lg p-4 border-2 ${rarityBg} border-gray-600 hover:border-gray-500 transition-all duration-200`}
+                    >
+                      <div className="text-center mb-3">
+                        <div className="text-2xl mb-2">
+                          {item.type === 'weapon' ? '⚔️' : '🛡️'}
+                        </div>
+                        <h3 className="text-white font-bold text-sm mb-1">{item.name}</h3>
+                        <div className={`text-xs font-semibold ${rarityColor} uppercase tracking-wide`}>
+                          {item.rarity}
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2 mb-3">
+                        {item.attackBonus > 0 && (
+                          <div className="flex justify-between text-xs">
+                            <span className="text-gray-400">Attack:</span>
+                            <span className="text-red-400 font-bold">+{item.attackBonus}</span>
+                          </div>
+                        )}
+                        {item.healthBonus > 0 && (
+                          <div className="flex justify-between text-xs">
+                            <span className="text-gray-400">Health:</span>
+                            <span className="text-green-400 font-bold">+{item.healthBonus}</span>
+                          </div>
+                        )}
+                        {item.specialEffect && (
+                          <div className="flex justify-between text-xs">
+                            <span className="text-gray-400">Special:</span>
+                            <span className="text-blue-400 font-bold capitalize">{item.specialEffect}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="text-center mb-3">
+                        <div className="text-yellow-400 font-bold text-lg">💰 {cost}</div>
+                        <div className="text-gray-400 text-xs">Gold</div>
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          if (resources.gold >= cost) {
+                            setResources(prev => ({
+                              ...prev,
+                              gold: prev.gold - cost
+                            }));
+                            
+                            // Add to a random recruited hero's inventory
+                            if (recruitedGenerals.length > 0) {
+                              const randomHero = recruitedGenerals[Math.floor(Math.random() * recruitedGenerals.length)];
+                              setHeroInventories(prev => ({
+                                ...prev,
+                                [randomHero]: [...(prev[randomHero] || []), item]
+                              }));
+                              
+                              setSellMessage(`${item.name} purchased and added to ${randomHero}'s inventory!`);
+                              setTimeout(() => setSellMessage(''), 4000);
+                            } else {
+                              setSellMessage(`${item.name} purchased! Recruit a hero to equip it.`);
+                              setTimeout(() => setSellMessage(''), 4000);
+                            }
+                          } else {
+                            alert(`Insufficient gold! You need ${cost} gold to purchase ${item.name}.`);
+                          }
+                        }}
+                        disabled={resources.gold < cost}
+                        className={`w-full py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+                          resources.gold < cost
+                            ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                            : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white'
+                        }`}
+                      >
+                        {resources.gold < cost ? 'Insufficient Gold' : 'Purchase'}
+                      </button>
+                    </motion.div>
+                  );
+                })}
+            </div>
             
             <div className="text-center mt-4">
               <motion.button
