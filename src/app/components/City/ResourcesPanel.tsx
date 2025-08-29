@@ -7,9 +7,10 @@ interface ResourcesPanelProps {
     population: number;
   };
   populationCapacity: number;
+  currentPopulationUsed: number;
 }
 
-export const ResourcesPanel: React.FC<ResourcesPanelProps> = ({ resources, populationCapacity }) => {
+export const ResourcesPanel: React.FC<ResourcesPanelProps> = ({ resources, populationCapacity, currentPopulationUsed }) => {
   return (
     <div className="bg-gray-800/90 rounded-lg p-4">
       <h2 className="text-lg font-bold text-white mb-3">Resources</h2>
@@ -26,7 +27,7 @@ export const ResourcesPanel: React.FC<ResourcesPanelProps> = ({ resources, popul
         </div>
         <div className="text-center">
           <div className="text-xl">👥</div>
-          <div className="text-blue-400 font-bold text-sm">{resources.population}/{populationCapacity}</div>
+          <div className="text-blue-400 font-bold text-sm">{currentPopulationUsed}/{populationCapacity}</div>
           <div className="text-gray-400 text-xs">Population</div>
         </div>
       </div>

@@ -48,7 +48,7 @@ export const ShopScreen: React.FC<ShopScreenProps> = ({
           <p className="text-gray-300 text-sm mb-3">Purchase weapons and armor</p>
           <div className="text-xs text-gray-400">
             <div>• Equipment available in battle</div>
-            <div>• Defeat enemies to find loot</div>
+            <div>• Defeat 黄巾军 to find loot</div>
             <div>• Higher levels = better drops</div>
           </div>
         </div>

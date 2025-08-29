@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { generateUniqueId, registerUniqueId } from '../../utils/uniqueId';
 
 // Types
 export interface InventoryItem {
@@ -20,6 +21,8 @@ export interface HeroEquippedGear {
   };
 }
 
+
+
 export const useInventory = () => {
   const [heroInventories, setHeroInventories] = useState<{
     [heroName: string]: InventoryItem[]
@@ -38,6 +41,13 @@ export const useInventory = () => {
       items.forEach(item => {
         allItems.push({ ...item, originalOwner: item.originalOwner || heroName });
       });
+    });
+    
+    // Register all existing uniqueIds to prevent duplicates
+    allItems.forEach(item => {
+      if (item.uniqueId) {
+        registerUniqueId(item.uniqueId);
+      }
     });
     
     return allItems.sort((a, b) => {
@@ -60,22 +70,45 @@ export const useInventory = () => {
 
   // Add item to inventory
   const addItemToInventory = (item: InventoryItem) => {
+    console.log('addItemToInventory called with:', item);
+    console.log('Item uniqueId:', item.uniqueId);
+    console.log('Item has uniqueId:', !!item.uniqueId);
     const allItems = getAllItems();
+    console.log('Current inventory size:', allItems.length, 'Max slots:', INVENTORY_SLOTS);
     if (allItems.length >= INVENTORY_SLOTS) {
       setSellMessage('📦 Inventory full! Cannot collect more items.');
       setTimeout(() => setSellMessage(''), 3000);
+      console.log('Inventory full, cannot add item');
       return false;
     }
 
+    // Only generate uniqueId if it doesn't already exist
+    let itemWithUniqueId = { ...item };
+    
+    if (!item.uniqueId) {
+      itemWithUniqueId = {
+        ...item,
+        uniqueId: generateUniqueId(item.id)
+      };
+      console.log('Generated new uniqueId:', itemWithUniqueId.uniqueId);
+    } else {
+      console.log('Using existing uniqueId:', item.uniqueId);
+      // Register the existing uniqueId to prevent future duplicates
+      registerUniqueId(item.uniqueId);
+      itemWithUniqueId = { ...item }; // Keep the existing uniqueId
+    }
+
     setHeroInventories(prev => {
-      const owner = item.originalOwner || 'All Heroes';
+      const owner = itemWithUniqueId.originalOwner || 'All Heroes';
       const updated = {
         ...prev,
-        [owner]: [...(prev[owner] || []), item]
+        [owner]: [...(prev[owner] || []), itemWithUniqueId]
       };
+      console.log('Updated hero inventories:', updated);
       return updated;
     });
 
+    console.log('Item added to inventory successfully with uniqueId:', itemWithUniqueId.uniqueId);
     return true;
   };
 
@@ -114,7 +147,7 @@ export const useInventory = () => {
       };
     });
 
-    setSellMessage(`⚔️ ${item.name} equipped to ${heroName}!`);
+          // setSellMessage(`⚔️ ${item.name} equipped to ${heroName}!`);
     setTimeout(() => setSellMessage(''), 3000);
   };
 
@@ -143,6 +176,29 @@ export const useInventory = () => {
         }
       };
     });
+  };
+
+  // Sell a single item
+  const sellItem = (itemToSell: InventoryItem) => {
+    const rarityValues = { common: 10, rare: 25, epic: 50, legendary: 100, mythic: 200 };
+    const itemValue = rarityValues[itemToSell.rarity];
+    
+    // Remove item from inventory
+    setHeroInventories(prev => {
+      const newInventories = { ...prev };
+      const owner = itemToSell.originalOwner || 'All Heroes';
+      
+      if (newInventories[owner]) {
+        newInventories[owner] = newInventories[owner].filter(item => item.uniqueId !== itemToSell.uniqueId);
+      }
+      
+      return newInventories;
+    });
+    
+    setSellMessage(`💰 Sold ${itemToSell.name} for ${itemValue} gold!`);
+    setTimeout(() => setSellMessage(''), 3000);
+    
+    return itemValue;
   };
 
   // Sell all items
@@ -218,6 +274,7 @@ export const useInventory = () => {
     addItemToInventory,
     equipItem,
     unequipItem,
+    sellItem,
     sellAllItems,
     isItemEquipped,
     getEquippedBy,

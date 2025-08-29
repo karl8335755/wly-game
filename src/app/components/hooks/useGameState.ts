@@ -77,9 +77,27 @@ export const useGameState = () => {
 
   // Recruit general
   const recruitGeneral = (heroName: string, cost: number): boolean => {
-    if (spendGold(cost)) {
+    // Hero population costs
+    const heroPopulationCosts: { [key: string]: number } = {
+      '刘备': 100,
+      '关羽': 100,
+      '张飞': 100,
+      '诸葛亮': 100
+    };
+    
+    const populationCost = heroPopulationCosts[heroName] || 20;
+    const currentPopulationUsed = recruitedGenerals.reduce((total, general) => {
+      return total + (heroPopulationCosts[general] || 20);
+    }, 0);
+    
+    // Check if we have enough gold and population capacity
+    if (spendGold(cost) && (currentPopulationUsed + populationCost <= populationCapacity)) {
       setRecruitedGenerals(prev => [...prev, heroName]);
       return true;
+    } else if (currentPopulationUsed + populationCost > populationCapacity) {
+      // Refund the gold if population check fails
+      addGold(cost);
+      return false;
     }
     return false;
   };
@@ -87,6 +105,20 @@ export const useGameState = () => {
   // Remove general
   const removeGeneral = (heroName: string) => {
     setRecruitedGenerals(prev => prev.filter(name => name !== heroName));
+  };
+
+  // Get current population usage
+  const getCurrentPopulationUsed = () => {
+    const heroPopulationCosts: { [key: string]: number } = {
+      '刘备': 100,
+      '关羽': 100,
+      '张飞': 100,
+      '诸葛亮': 100
+    };
+    
+    return recruitedGenerals.reduce((total, general) => {
+      return total + (heroPopulationCosts[general] || 100);
+    }, 0);
   };
 
   // Change screen
@@ -111,6 +143,7 @@ export const useGameState = () => {
     upgradeCity,
     recruitGeneral,
     removeGeneral,
+    getCurrentPopulationUsed,
     changeScreen
   };
 };

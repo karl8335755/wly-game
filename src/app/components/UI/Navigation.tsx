@@ -15,15 +15,15 @@ export const Navigation: React.FC<NavigationProps> = ({ currentScreen, onScreenC
   ];
 
   return (
-    <nav className="bg-gray-900/95 border-b border-gray-700 py-1 px-4 h-[100px]">
-      <div className="max-w-7xl mx-auto flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center justify-center -mt-2 -ml-8">
+    <nav className="bg-gray-900/95 border-b border-gray-700 py-2 px-4 h-[100px]">
+      <div className="max-w-7xl mx-auto flex items-center justify-between h-full">
+        <div className="flex items-center">
+          <div className="flex items-center justify-center">
             <Image 
               src="/l.png" 
               alt="Logo"
-              width={256}
-              height={128}
+              width={200}
+              height={100}
               className="object-contain"
             />
           </div>

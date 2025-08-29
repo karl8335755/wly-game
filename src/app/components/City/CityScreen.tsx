@@ -10,6 +10,7 @@ interface CityScreenProps {
   };
   cityTier: number;
   populationCapacity: number;
+  currentPopulationUsed: number;
   onUpgradeCity: () => boolean;
   sellMessage: string;
 }
@@ -18,6 +19,7 @@ export const CityScreen: React.FC<CityScreenProps> = ({
   resources,
   cityTier,
   populationCapacity,
+  currentPopulationUsed,
   onUpgradeCity,
   sellMessage
 }) => {
@@ -25,7 +27,7 @@ export const CityScreen: React.FC<CityScreenProps> = ({
     <div className="max-w-7xl mx-auto">
       {/* Resources and City Development */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-        <ResourcesPanel resources={resources} populationCapacity={populationCapacity} />
+        <ResourcesPanel resources={resources} populationCapacity={populationCapacity} currentPopulationUsed={currentPopulationUsed} />
         <CityDevelopment 
           cityTier={cityTier} 
           populationCapacity={populationCapacity}

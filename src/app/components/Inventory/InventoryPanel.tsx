@@ -1,20 +1,55 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { InventoryItem } from '../hooks/useInventory';
+
+// Custom Tooltip Component
+const ItemTooltip: React.FC<{ item: InventoryItem; equippedBy: string | null; isVisible: boolean }> = ({ 
+  item, 
+  equippedBy, 
+  isVisible 
+}) => {
+  if (!isVisible) return null;
+
+  return (
+    <div className="absolute z-50 bg-gray-900 border border-gray-600 rounded-lg p-3 shadow-xl text-white text-sm min-w-48 -top-2 left-full ml-2">
+      <div className="font-bold text-lg mb-2">{item.name}</div>
+      <div className="text-gray-300 mb-1">{item.rarity} {item.type}</div>
+      <div className="text-green-400 mb-1">+{item.attackBonus} ATK</div>
+      <div className="text-blue-400 mb-2">+{item.healthBonus} HP</div>
+      {equippedBy && (
+        <div className="text-yellow-400 font-semibold border-t border-gray-600 pt-2">
+          Equipped by {equippedBy}
+        </div>
+      )}
+    </div>
+  );
+};
 
 interface InventoryPanelProps {
   allItems: InventoryItem[];
-  onEquipItem: (item: InventoryItem, heroName: string) => void;
+  selectedHero: string;
+  onEquipItem: (item: InventoryItem) => void;
+  onSellItem: (item: InventoryItem) => void;
   onSellAllItems: () => void;
   sellMessage: string;
+  heroEquippedGear: {
+    [heroName: string]: {
+      weapon: InventoryItem | null;
+      armor: InventoryItem | null;
+    };
+  };
 }
 
 export const InventoryPanel: React.FC<InventoryPanelProps> = ({
   allItems,
+  selectedHero,
   onEquipItem,
+  onSellItem,
   onSellAllItems,
-  sellMessage
+  sellMessage,
+  heroEquippedGear
 }) => {
-  const [selectedHero, setSelectedHero] = useState<string>('刘备');
+  const [sortOrder, setSortOrder] = useState<'strongest' | 'weakest'>('strongest');
+  const [hoveredItem, setHoveredItem] = useState<string | null>(null);
 
   const heroOptions = ['刘备', '关羽', '张飞', '诸葛亮'];
 
@@ -40,18 +75,163 @@ export const InventoryPanel: React.FC<InventoryPanelProps> = ({
     }
   };
 
-  const getEquippedBy = (): string | null => {
-    // This would need to be implemented based on your equipped gear logic
+  const getEquippedBy = (item: InventoryItem): string | null => {
+    // Check if this item is equipped by any hero
+    console.log('=== getEquippedBy called ===');
+    console.log('Item:', item.name, 'uniqueId:', item.uniqueId);
+    console.log('heroEquippedGear:', heroEquippedGear);
+    console.log('heroEquippedGear type:', typeof heroEquippedGear);
+    console.log('heroEquippedGear keys:', Object.keys(heroEquippedGear || {}));
+    
+    if (!heroEquippedGear) {
+      console.log('heroEquippedGear is null/undefined');
+      return null;
+    }
+    
+    for (const [heroName, gear] of Object.entries(heroEquippedGear)) {
+      console.log(`Checking ${heroName}:`, gear);
+      console.log(`  Weapon uniqueId:`, gear.weapon?.uniqueId);
+      console.log(`  Armor uniqueId:`, gear.armor?.uniqueId);
+      console.log(`  Item uniqueId:`, item.uniqueId);
+      console.log(`  Weapon match:`, gear.weapon?.uniqueId === item.uniqueId);
+      console.log(`  Armor match:`, gear.armor?.uniqueId === item.uniqueId);
+      
+      if (gear.weapon?.uniqueId === item.uniqueId || gear.armor?.uniqueId === item.uniqueId) {
+        console.log(`✅ Item ${item.name} is equipped by ${heroName}`);
+        return heroName;
+      }
+    }
+    console.log(`❌ Item ${item.name} is not equipped by anyone`);
     return null;
   };
 
+  // Check if an item is an upgrade for the selected hero
+  const isUpgrade = (item: InventoryItem): boolean => {
+    if (!selectedHero || !heroEquippedGear || !heroEquippedGear[selectedHero]) {
+      console.log('isUpgrade check failed - missing data:', { selectedHero, hasHeroEquippedGear: !!heroEquippedGear, hasSelectedHero: !!(heroEquippedGear && heroEquippedGear[selectedHero]) });
+      return false;
+    }
+
+    const equippedGear = heroEquippedGear[selectedHero];
+    const equippedItem = equippedGear[item.type]; // weapon or armor
+
+    if (!equippedItem) {
+      // No item equipped of this type, so any item is an upgrade
+      console.log(`No ${item.type} equipped for ${selectedHero}, ${item.name} is an upgrade`);
+      return true;
+    }
+
+    // Calculate total stats for comparison
+    const itemTotalStats = item.attackBonus + item.healthBonus;
+    const equippedTotalStats = equippedItem.attackBonus + equippedItem.healthBonus;
+
+    console.log(`Comparing ${item.name} (${itemTotalStats} stats) vs ${equippedItem.name} (${equippedTotalStats} stats) for ${selectedHero}`);
+
+    // Check if the item has better stats
+    if (itemTotalStats > equippedTotalStats) {
+      console.log(`${item.name} has better stats (+${itemTotalStats - equippedTotalStats})`);
+      return true;
+    }
+
+    // If stats are equal, check rarity (higher rarity is better)
+    const rarityOrder = { common: 1, rare: 2, epic: 3, legendary: 4, mythic: 5 };
+    const itemRarity = rarityOrder[item.rarity] || 1;
+    const equippedRarity = rarityOrder[equippedItem.rarity] || 1;
+
+    if (itemRarity > equippedRarity) {
+      console.log(`${item.name} has better rarity (${item.rarity} vs ${equippedItem.rarity})`);
+      return true;
+    }
+
+    console.log(`${item.name} is not an upgrade`);
+    return false;
+  };
+
+  // Get upgrade suggestion text
+  const getUpgradeSuggestion = (item: InventoryItem): string => {
+    if (!selectedHero || !heroEquippedGear || !heroEquippedGear[selectedHero]) {
+      return '';
+    }
+
+    const equippedGear = heroEquippedGear[selectedHero];
+    const equippedItem = equippedGear[item.type];
+
+    if (!equippedItem) {
+      return 'Equip';
+    }
+
+    const itemTotalStats = item.attackBonus + item.healthBonus;
+    const equippedTotalStats = equippedItem.attackBonus + equippedItem.healthBonus;
+    const statDiff = itemTotalStats - equippedTotalStats;
+
+    if (statDiff > 0) {
+      return `+${statDiff} Stats`;
+    } else if (statDiff === 0) {
+      const rarityOrder = { common: 1, rare: 2, epic: 3, legendary: 4, mythic: 5 };
+      const itemRarity = rarityOrder[item.rarity] || 1;
+      const equippedRarity = rarityOrder[equippedItem.rarity] || 1;
+      
+      if (itemRarity > equippedRarity) {
+        return 'Better Rarity';
+      }
+    }
+
+    return '';
+  };
+
+  // Sort items by strength
+  const sortedItems = useMemo(() => {
+    const sorted = [...allItems].sort((a, b) => {
+      // Calculate total stats for each item
+      const aTotalStats = a.attackBonus + a.healthBonus;
+      const bTotalStats = b.attackBonus + b.healthBonus;
+      
+      // If stats are equal, sort by rarity
+      if (aTotalStats === bTotalStats) {
+        const rarityOrder = { common: 1, rare: 2, epic: 3, legendary: 4, mythic: 5 };
+        const aRarity = rarityOrder[a.rarity] || 1;
+        const bRarity = rarityOrder[b.rarity] || 1;
+        
+        if (sortOrder === 'strongest') {
+          return bRarity - aRarity; // Higher rarity first
+        } else {
+          return aRarity - bRarity; // Lower rarity first
+        }
+      }
+      
+      // Sort by total stats
+      if (sortOrder === 'strongest') {
+        return bTotalStats - aTotalStats; // Higher stats first
+      } else {
+        return aTotalStats - bTotalStats; // Lower stats first
+      }
+    });
+    
+    return sorted;
+  }, [allItems, sortOrder]);
+
   return (
-    <div className="bg-gray-800/90 rounded-lg p-4 h-full flex flex-col">
+    <div className="bg-gray-800/90 rounded-lg p-4 h-64 flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-lg font-bold text-white">Inventory</h2>
+        <div>
+          <h2 className="text-lg font-bold text-white">Inventory</h2>
+          {selectedHero && (
+            <div className="text-xs text-blue-400">
+              Selected: {selectedHero}
+            </div>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-400">{allItems.length}/20</span>
+          {allItems.length > 1 && (
+            <button
+              onClick={() => setSortOrder(sortOrder === 'strongest' ? 'weakest' : 'strongest')}
+              className="px-3 py-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-xs font-semibold rounded transition-all duration-200"
+            >
+              {sortOrder === 'strongest' ? 'Strongest' : 'Weakest'}
+            </button>
+          )}
           {allItems.length > 0 && (
             <button
               onClick={onSellAllItems}
@@ -70,6 +250,8 @@ export const InventoryPanel: React.FC<InventoryPanelProps> = ({
         </div>
       )}
 
+
+
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
         {allItems.length === 0 ? (
@@ -77,58 +259,114 @@ export const InventoryPanel: React.FC<InventoryPanelProps> = ({
             Inventory Empty
           </div>
         ) : (
-          <div className="space-y-2">
-            {allItems.map((item, index) => {
+          <div className="grid grid-cols-5 gap-1 max-h-40">
+            {sortedItems.map((item, index) => {
+              console.log(`Rendering item ${index}:`, item.name, 'uniqueId:', item.uniqueId);
               const rarityColor = getRarityColor(item.rarity);
               const rarityBgColor = getRarityBgColor(item.rarity);
-              const equippedBy = getEquippedBy();
+              const equippedBy = getEquippedBy(item);
+              const itemKey = item.uniqueId || `fallback_${item.id}_${index}`;
+              const isItemUpgrade = isUpgrade(item);
+              const upgradeSuggestion = getUpgradeSuggestion(item);
+              
+              // Debug logging
+              if (selectedHero && isItemUpgrade) {
+                console.log(`Upgrade detected for ${selectedHero}:`, item.name, 'Suggestion:', upgradeSuggestion);
+              }
+              
+              // Debug logging for equipped items
+              if (equippedBy) {
+                console.log(`🎯 Equipped item detected: ${item.name} equipped by ${equippedBy}`);
+              } else {
+                console.log(`🔍 Item ${item.name} is NOT equipped`);
+              }
 
               return (
                 <div
-                  key={item.uniqueId || index}
-                  className={`${rarityBgColor} border rounded-lg p-3 transition-all duration-200 ${
-                    equippedBy ? 'ring-2 ring-green-500/50' : ''
-                  }`}
+                  key={itemKey}
+                  className={`${rarityBgColor} border rounded p-1 transition-all duration-200 aspect-square relative cursor-pointer ${
+                    equippedBy 
+                      ? 'ring-3 ring-green-400 shadow-xl border-green-300 bg-gradient-to-br from-green-900/30 to-green-800/20 scale-105 shadow-green-500/20' 
+                      : 'hover:scale-105 hover:shadow-lg'
+                  } ${isItemUpgrade && !equippedBy ? 'ring-2 ring-green-400 shadow-lg' : ''}`}
+                  onMouseEnter={() => setHoveredItem(item.uniqueId || itemKey)}
+                  onMouseLeave={() => setHoveredItem(null)}
                 >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <span className={`text-xs font-bold px-2 py-1 rounded ${rarityColor}`}>
-                        {item.rarity.toUpperCase()}
-                      </span>
-                      <span className="text-xs text-gray-400">{item.type}</span>
-                    </div>
-                    {equippedBy && (
-                      <span className="text-xs text-green-400 font-semibold">
-                        Equipped by {equippedBy}
-                      </span>
-                    )}
+                  {/* Rarity Badge */}
+                  <div className="absolute top-0 left-0">
+                    <span className={`text-xs font-bold px-1 py-0.5 rounded ${rarityColor}`}>
+                      {item.rarity.charAt(0).toUpperCase()}
+                    </span>
                   </div>
 
-                  <div className="text-white font-semibold text-sm mb-2">
+                  {/* Equipped Indicator */}
+                  {equippedBy && (
+                    <div className="absolute top-0 right-0">
+                      <div className="bg-gradient-to-r from-green-600 to-green-500 text-white text-xs font-bold px-2 py-1 rounded-bl shadow-lg border border-green-300">
+                        ⚔️ {equippedBy}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Custom Tooltip */}
+                  <ItemTooltip 
+                    item={item} 
+                    equippedBy={equippedBy} 
+                    isVisible={hoveredItem === (item.uniqueId || itemKey)} 
+                  />
+                  
+                  {/* Item Name */}
+                  <div className={`font-semibold text-xs text-center mt-4 truncate px-1 ${
+                    equippedBy ? 'text-green-200 font-bold' : 'text-white'
+                  }`}>
                     {item.name}
                   </div>
-
-                  <div className="text-xs text-gray-300 mb-2">
-                    <div>Attack: +{item.attackBonus}</div>
-                    <div>Health: +{item.healthBonus}</div>
-                    <div>Owner: {item.originalOwner}</div>
+                  
+                  {/* Stats */}
+                  <div className={`text-xs text-center mt-1 ${
+                    equippedBy ? 'text-green-300 font-semibold' : 'text-gray-300'
+                  }`}>
+                    <div>+{item.attackBonus} ATK</div>
+                    <div>+{item.healthBonus} HP</div>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <select
-                      value={selectedHero}
-                      onChange={(e) => setSelectedHero(e.target.value)}
-                      className="flex-1 text-xs bg-gray-700 text-white rounded px-2 py-1 border border-gray-600"
-                    >
-                      {heroOptions.map(hero => (
-                        <option key={hero} value={hero}>{hero}</option>
-                      ))}
-                    </select>
+                  {/* Upgrade Suggestion */}
+                  {isItemUpgrade && upgradeSuggestion && (
+                    <div className="absolute top-0 right-0 z-10">
+                      <div className="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-bl shadow-lg border border-green-300">
+                        {upgradeSuggestion}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Always Visible Equip and Sell Buttons */}
+                  <div className="absolute bottom-1 right-1 flex gap-1">
+                    {selectedHero ? (
+                      equippedBy ? (
+                        <button
+                          onClick={() => onEquipItem(item)}
+                          className="w-12 h-6 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white text-xs font-semibold rounded transition-all duration-200 flex items-center justify-center"
+                        >
+                          Unequip
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => onEquipItem(item)}
+                          className="w-12 h-6 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-xs font-semibold rounded transition-all duration-200 flex items-center justify-center"
+                        >
+                          Equip
+                        </button>
+                      )
+                    ) : (
+                      <div className="w-12 h-6 bg-gray-600 text-gray-400 text-xs rounded flex items-center justify-center">
+                        Select Hero
+                      </div>
+                    )}
                     <button
-                      onClick={() => onEquipItem(item, selectedHero)}
-                      className="px-3 py-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-xs font-semibold rounded transition-all duration-200"
+                      onClick={() => onSellItem(item)}
+                      className="w-12 h-6 bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-700 hover:to-yellow-800 text-white text-xs font-semibold rounded transition-all duration-200 flex items-center justify-center"
                     >
-                      Equip
+                      Sell
                     </button>
                   </div>
                 </div>

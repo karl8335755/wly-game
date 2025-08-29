@@ -13,12 +13,22 @@ interface BattleScreenProps {
   heroesInBattle: HeroInBattle[];
   recruitedGenerals: string[];
   allItems: InventoryItem[];
+  selectedHero: string;
+  onSelectHero: (heroName: string) => void;
   onStartBattle: () => void;
   onNextLevel: () => void;
   onBackToCity: () => void;
-  onEquipItem: (item: InventoryItem, heroName: string) => void;
+  onEquipItem: (item: InventoryItem) => void;
+  onSellItem: (item: InventoryItem) => void;
   onSellAllItems: () => void;
+  onToggleSpeed: () => void;
   sellMessage: string;
+  heroEquippedGear: {
+    [heroName: string]: {
+      weapon: any | null;
+      armor: any | null;
+    };
+  };
 }
 
 export const BattleScreen: React.FC<BattleScreenProps> = ({
@@ -27,12 +37,17 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({
   heroesInBattle,
   recruitedGenerals,
   allItems,
+  selectedHero,
+  onSelectHero,
   onStartBattle,
   onNextLevel,
   onBackToCity,
   onEquipItem,
+  onSellItem,
   onSellAllItems,
-  sellMessage
+  onToggleSpeed,
+  sellMessage,
+  heroEquippedGear
 }) => {
   return (
     <div className="max-w-7xl mx-auto">
@@ -44,54 +59,21 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({
         onStartBattle={onStartBattle}
         onNextLevel={onNextLevel}
         onBackToCity={onBackToCity}
+        onToggleSpeed={onToggleSpeed}
       />
 
       {/* Battle Layout */}
       <div className="flex flex-col gap-4 h-[calc(100vh-200px)]">
-        {/* Row 1: Level Grid */}
-        <div className="flex-shrink-0">
-          <div className="bg-gray-800/90 rounded-lg p-4">
-            <h2 className="text-lg font-bold text-white mb-3">Level Progress</h2>
-            <div className="flex flex-wrap gap-2">
-              {Array.from({ length: 10 }, (_, i) => i + 1).map((level) => {
-                const isCurrent = level === battleState.currentLevel;
-                const isCompleted = completedLevels.has(level);
-                const isLocked = level > 1 && !completedLevels.has(level - 1);
-
-                let bgColor = 'bg-gray-600';
-                let textColor = 'text-gray-400';
-                
-                if (isCurrent) {
-                  bgColor = 'bg-blue-600';
-                  textColor = 'text-white';
-                } else if (isCompleted) {
-                  bgColor = 'bg-green-600';
-                  textColor = 'text-white';
-                } else if (isLocked) {
-                  bgColor = 'bg-gray-700';
-                  textColor = 'text-gray-500';
-                }
-
-                return (
-                  <div
-                    key={level}
-                    className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${bgColor} ${textColor}`}
-                  >
-                    {level}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        {/* Row 2: Heroes and Enemies */}
+        {/* Row 1: Heroes and 黄巾军 */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 flex-shrink-0">
           {/* Heroes Side */}
           <div>
             <HeroesDisplay 
               heroesInBattle={heroesInBattle}
               recruitedGenerals={recruitedGenerals}
+              selectedHero={selectedHero}
+              onSelectHero={onSelectHero}
+              heroEquippedGear={heroEquippedGear}
             />
           </div>
 
@@ -115,10 +97,19 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({
           <div>
             <InventoryPanel
               allItems={allItems}
+              selectedHero={selectedHero}
               onEquipItem={onEquipItem}
+              onSellItem={onSellItem}
               onSellAllItems={onSellAllItems}
               sellMessage={sellMessage}
+              heroEquippedGear={heroEquippedGear}
             />
+            {/* Debug: Show heroEquippedGear */}
+            {process.env.NODE_ENV === 'development' && (
+              <div className="text-xs text-gray-400 mt-2">
+                Debug - heroEquippedGear: {JSON.stringify(heroEquippedGear, null, 2)}
+              </div>
+            )}
           </div>
         </div>
       </div>

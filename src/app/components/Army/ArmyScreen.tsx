@@ -4,7 +4,6 @@ import Image from 'next/image';
 interface ArmyScreenProps {
   recruitedGenerals: string[];
   onRecruitGeneral: (heroName: string, cost: number) => boolean;
-  onRemoveGeneral: (heroName: string) => void;
   resources: {
     gold: number;
   };
@@ -13,14 +12,13 @@ interface ArmyScreenProps {
 export const ArmyScreen: React.FC<ArmyScreenProps> = ({
   recruitedGenerals,
   onRecruitGeneral,
-  onRemoveGeneral,
   resources
 }) => {
   const heroData = [
-    { name: '刘备', attackPower: 25, health: 120, image: '/liubei.png', cost: 500 },
-    { name: '关羽', attackPower: 30, health: 100, image: '/guanyu.png', cost: 800 },
-    { name: '张飞', attackPower: 28, health: 110, image: '/zhugeliang.png', cost: 700 },
-    { name: '诸葛亮', attackPower: 22, health: 90, image: '/caocao.png', cost: 1000 }
+    { name: '刘备', attackPower: 25, health: 120, image: '/liubei.png', cost: 500, populationCost: 100 },
+    { name: '关羽', attackPower: 30, health: 100, image: '/guanyu.png', cost: 800, populationCost: 100 },
+    { name: '张飞', attackPower: 28, health: 110, image: '/zhugeliang.png', cost: 700, populationCost: 100 },
+    { name: '诸葛亮', attackPower: 22, health: 90, image: '/caocao.png', cost: 1000, populationCost: 100 }
   ];
 
   return (
@@ -52,15 +50,13 @@ export const ArmyScreen: React.FC<ArmyScreenProps> = ({
                 <div>Attack: {hero.attackPower}</div>
                 <div>Health: {hero.health}</div>
                 <div>Cost: {hero.cost} gold</div>
+                <div>Population: {hero.populationCost}</div>
               </div>
 
               {isRecruited ? (
-                <button
-                  onClick={() => onRemoveGeneral(hero.name)}
-                  className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200"
-                >
-                  Remove
-                </button>
+                <div className="w-full bg-gradient-to-r from-green-600/20 to-green-700/20 border border-green-500/30 text-green-300 font-semibold py-2 px-4 rounded-lg text-center">
+                  ✓ Recruited
+                </div>
               ) : (
                 <button
                   onClick={() => onRecruitGeneral(hero.name, hero.cost)}

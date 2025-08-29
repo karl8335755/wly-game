@@ -9,8 +9,12 @@ import { ShopScreen } from './components/Shop/ShopScreen';
 import { useGameState } from './components/hooks/useGameState';
 import { useBattle } from './components/hooks/useBattle';
 import { useInventory } from './components/hooks/useInventory';
+import { getUniqueIdRegistryInfo } from './utils/uniqueId';
 
 export default function Home() {
+  // Global hero selection state
+  const [selectedHero, setSelectedHero] = React.useState<string>('');
+
   // Game state management
   const {
     currentScreen,
@@ -23,15 +27,18 @@ export default function Home() {
     upgradeCity,
     recruitGeneral,
     removeGeneral,
+    getCurrentPopulationUsed,
     changeScreen
   } = useGameState();
 
   // Inventory management
   const {
+    heroEquippedGear,
     sellMessage,
     getAllItems,
     addItemToInventory,
     equipItem,
+    sellItem,
     sellAllItems
   } = useInventory();
 
@@ -42,23 +49,33 @@ export default function Home() {
     heroesInBattle,
     startBattle,
     nextLevel,
-    stopBattle
+    stopBattle,
+    toggleSpeed
   } = useBattle();
 
   // Handle loot drops from battle
   const handleLootDrop = (item: any) => {
+    console.log('handleLootDrop called with:', item);
     if (item && item.id) {
       // This is a new item being dropped
-      const uniqueId = `${item.id}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      console.log('Adding new item to inventory:', item);
+      console.log('Item uniqueId before adding to inventory:', item.uniqueId);
+      // Use the uniqueId that was already generated in the battle hook
       const newItem = {
         ...item,
-        uniqueId,
         originalOwner: item.owner || 'All Heroes'
       };
       addItemToInventory(newItem);
+      console.log('Item added to inventory successfully');
+      
+      // Debug: Log registry info
+      const registryInfo = getUniqueIdRegistryInfo();
+      console.log('UniqueId Registry Info:', registryInfo);
     } else {
       // This is a request to get current items count
-      return getAllItems();
+      const items = getAllItems();
+      console.log('Returning current items count:', items.length);
+      return items;
     }
   };
 
@@ -95,8 +112,16 @@ export default function Home() {
   };
 
   // Handle equip item
-  const handleEquipItem = (item: any, heroName: string) => {
-    equipItem(item, heroName);
+  const handleEquipItem = (item: any) => {
+    if (selectedHero) {
+      equipItem(item, selectedHero);
+    }
+  };
+
+  // Handle sell item
+  const handleSellItem = (item: any) => {
+    const goldGained = sellItem(item);
+    addGold(goldGained);
   };
 
   return (
@@ -111,6 +136,7 @@ export default function Home() {
             resources={resources}
             cityTier={cityTier}
             populationCapacity={populationCapacity}
+            currentPopulationUsed={getCurrentPopulationUsed()}
             onUpgradeCity={handleUpgradeCity}
             sellMessage={sellMessage}
           />
@@ -120,7 +146,6 @@ export default function Home() {
           <ArmyScreen
             recruitedGenerals={recruitedGenerals}
             onRecruitGeneral={recruitGeneral}
-            onRemoveGeneral={removeGeneral}
             resources={resources}
           />
         )}
@@ -132,12 +157,17 @@ export default function Home() {
             heroesInBattle={heroesInBattle}
             recruitedGenerals={recruitedGenerals}
             allItems={getAllItems()}
+            selectedHero={selectedHero}
+            onSelectHero={setSelectedHero}
             onStartBattle={handleStartBattle}
             onNextLevel={handleNextLevel}
             onBackToCity={handleBackToCity}
             onEquipItem={handleEquipItem}
+            onSellItem={handleSellItem}
             onSellAllItems={handleSellAllItems}
+            onToggleSpeed={toggleSpeed}
             sellMessage={sellMessage}
+            heroEquippedGear={heroEquippedGear}
           />
         )}
 
