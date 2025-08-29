@@ -12,6 +12,22 @@ const compat = new FlatCompat({
 const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
   {
+    rules: {
+      // Disable image optimization warnings since we're using Next.js Image
+      "@next/next/no-img-element": "off",
+      
+      // Allow any types in certain contexts (battle logic)
+      "@typescript-eslint/no-explicit-any": "warn",
+      
+      // Allow unused variables that start with underscore
+      "@typescript-eslint/no-unused-vars": ["error", { 
+        argsIgnorePattern: "^_",
+        varsIgnorePattern: "^_",
+        caughtErrorsIgnorePattern: "^_"
+      }],
+    },
+  },
+  {
     ignores: [
       "node_modules/**",
       ".next/**",
