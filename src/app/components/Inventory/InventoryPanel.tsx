@@ -75,40 +75,78 @@ export const InventoryPanel: React.FC<InventoryPanelProps> = ({
     }
   };
 
+  const getEquippedRarityBgColor = (rarity: string) => {
+    switch (rarity) {
+      case 'mythic': return 'bg-gradient-to-br from-purple-900/80 to-purple-800/60 border-purple-400 scale-105 shadow-purple-500/30 hover:scale-110 hover:shadow-lg';
+      case 'legendary': return 'bg-gradient-to-br from-orange-900/80 to-orange-800/60 border-orange-400 scale-105 shadow-orange-500/30 hover:scale-110 hover:shadow-lg';
+      case 'epic': return 'bg-gradient-to-br from-purple-900/80 to-purple-800/60 border-purple-400 scale-105 shadow-purple-500/30 hover:scale-110 hover:shadow-lg';
+      case 'rare': return 'bg-gradient-to-br from-blue-900/80 to-blue-800/60 border-blue-400 scale-105 shadow-blue-500/30 hover:scale-110 hover:shadow-lg';
+      case 'common': return 'bg-gradient-to-br from-gray-900/80 to-gray-800/60 border-gray-400 scale-105 shadow-gray-500/30 hover:scale-110 hover:shadow-lg';
+      default: return 'bg-gradient-to-br from-gray-900/80 to-gray-800/60 border-gray-400 scale-105 shadow-gray-500/30 hover:scale-110 hover:shadow-lg';
+    }
+  };
+
+  const getEquippedRarityRingColor = (rarity: string) => {
+    switch (rarity) {
+      case 'mythic': return 'ring-3 ring-purple-400 shadow-xl';
+      case 'legendary': return 'ring-3 ring-orange-400 shadow-xl';
+      case 'epic': return 'ring-3 ring-purple-400 shadow-xl';
+      case 'rare': return 'ring-3 ring-blue-400 shadow-xl';
+      case 'common': return 'ring-3 ring-gray-400 shadow-xl';
+      default: return 'ring-3 ring-gray-400 shadow-xl';
+    }
+  };
+
+  const getEquippedRarityTextColor = (rarity: string) => {
+    switch (rarity) {
+      case 'mythic': return 'text-purple-200 font-bold';
+      case 'legendary': return 'text-orange-200 font-bold';
+      case 'epic': return 'text-purple-200 font-bold';
+      case 'rare': return 'text-blue-200 font-bold';
+      case 'common': return 'text-gray-200 font-bold';
+      default: return 'text-gray-200 font-bold';
+    }
+  };
+
+  const getEquippedRarityStatsColor = (rarity: string) => {
+    switch (rarity) {
+      case 'mythic': return 'text-purple-300 font-semibold';
+      case 'legendary': return 'text-orange-300 font-semibold';
+      case 'epic': return 'text-purple-300 font-semibold';
+      case 'rare': return 'text-blue-300 font-semibold';
+      case 'common': return 'text-gray-300 font-semibold';
+      default: return 'text-gray-300 font-semibold';
+    }
+  };
+
+  const getEquippedRarityBadgeColor = (rarity: string) => {
+    switch (rarity) {
+      case 'mythic': return 'bg-gradient-to-r from-purple-600 to-purple-500 text-white border-purple-400';
+      case 'legendary': return 'bg-gradient-to-r from-orange-600 to-orange-500 text-white border-orange-400';
+      case 'epic': return 'bg-gradient-to-r from-purple-600 to-purple-500 text-white border-purple-400';
+      case 'rare': return 'bg-gradient-to-r from-blue-600 to-blue-500 text-white border-blue-400';
+      case 'common': return 'bg-gradient-to-r from-gray-600 to-gray-500 text-white border-gray-400';
+      default: return 'bg-gradient-to-r from-gray-600 to-gray-500 text-white border-gray-400';
+    }
+  };
+
   const getEquippedBy = (item: InventoryItem): string | null => {
     // Check if this item is equipped by any hero
-    console.log('=== getEquippedBy called ===');
-    console.log('Item:', item.name, 'uniqueId:', item.uniqueId);
-    console.log('heroEquippedGear:', heroEquippedGear);
-    console.log('heroEquippedGear type:', typeof heroEquippedGear);
-    console.log('heroEquippedGear keys:', Object.keys(heroEquippedGear || {}));
-    
     if (!heroEquippedGear) {
-      console.log('heroEquippedGear is null/undefined');
       return null;
     }
     
     for (const [heroName, gear] of Object.entries(heroEquippedGear)) {
-      console.log(`Checking ${heroName}:`, gear);
-      console.log(`  Weapon uniqueId:`, gear.weapon?.uniqueId);
-      console.log(`  Armor uniqueId:`, gear.armor?.uniqueId);
-      console.log(`  Item uniqueId:`, item.uniqueId);
-      console.log(`  Weapon match:`, gear.weapon?.uniqueId === item.uniqueId);
-      console.log(`  Armor match:`, gear.armor?.uniqueId === item.uniqueId);
-      
       if (gear.weapon?.uniqueId === item.uniqueId || gear.armor?.uniqueId === item.uniqueId) {
-        console.log(`✅ Item ${item.name} is equipped by ${heroName}`);
         return heroName;
       }
     }
-    console.log(`❌ Item ${item.name} is not equipped by anyone`);
     return null;
   };
 
   // Check if an item is an upgrade for the selected hero
   const isUpgrade = (item: InventoryItem): boolean => {
     if (!selectedHero || !heroEquippedGear || !heroEquippedGear[selectedHero]) {
-      console.log('isUpgrade check failed - missing data:', { selectedHero, hasHeroEquippedGear: !!heroEquippedGear, hasSelectedHero: !!(heroEquippedGear && heroEquippedGear[selectedHero]) });
       return false;
     }
 
@@ -117,7 +155,6 @@ export const InventoryPanel: React.FC<InventoryPanelProps> = ({
 
     if (!equippedItem) {
       // No item equipped of this type, so any item is an upgrade
-      console.log(`No ${item.type} equipped for ${selectedHero}, ${item.name} is an upgrade`);
       return true;
     }
 
@@ -125,11 +162,8 @@ export const InventoryPanel: React.FC<InventoryPanelProps> = ({
     const itemTotalStats = item.attackBonus + item.healthBonus;
     const equippedTotalStats = equippedItem.attackBonus + equippedItem.healthBonus;
 
-    console.log(`Comparing ${item.name} (${itemTotalStats} stats) vs ${equippedItem.name} (${equippedTotalStats} stats) for ${selectedHero}`);
-
     // Check if the item has better stats
     if (itemTotalStats > equippedTotalStats) {
-      console.log(`${item.name} has better stats (+${itemTotalStats - equippedTotalStats})`);
       return true;
     }
 
@@ -139,11 +173,9 @@ export const InventoryPanel: React.FC<InventoryPanelProps> = ({
     const equippedRarity = rarityOrder[equippedItem.rarity] || 1;
 
     if (itemRarity > equippedRarity) {
-      console.log(`${item.name} has better rarity (${item.rarity} vs ${equippedItem.rarity})`);
       return true;
     }
 
-    console.log(`${item.name} is not an upgrade`);
     return false;
   };
 
@@ -261,36 +293,24 @@ export const InventoryPanel: React.FC<InventoryPanelProps> = ({
         ) : (
           <div className="grid grid-cols-5 gap-1 max-h-40">
             {sortedItems.map((item, index) => {
-              console.log(`Rendering item ${index}:`, item.name, 'uniqueId:', item.uniqueId);
               const rarityColor = getRarityColor(item.rarity);
               const rarityBgColor = getRarityBgColor(item.rarity);
               const equippedBy = getEquippedBy(item);
+              // Use uniqueId as key, with fallback to index
               const itemKey = item.uniqueId || `fallback_${item.id}_${index}`;
               const isItemUpgrade = isUpgrade(item);
               const upgradeSuggestion = getUpgradeSuggestion(item);
-              
-              // Debug logging
-              if (selectedHero && isItemUpgrade) {
-                console.log(`Upgrade detected for ${selectedHero}:`, item.name, 'Suggestion:', upgradeSuggestion);
-              }
-              
-              // Debug logging for equipped items
-              if (equippedBy) {
-                console.log(`🎯 Equipped item detected: ${item.name} equipped by ${equippedBy}`);
-              } else {
-                console.log(`🔍 Item ${item.name} is NOT equipped`);
-              }
 
               return (
                 <div
                   key={itemKey}
-                  className={`${rarityBgColor} border rounded p-1 transition-all duration-200 aspect-square relative cursor-pointer ${
+                  className={`${equippedBy ? getEquippedRarityBgColor(item.rarity) : rarityBgColor} border rounded p-1 transition-all duration-200 aspect-square relative cursor-pointer ${
                     equippedBy 
-                      ? 'ring-3 ring-green-400 shadow-xl border-green-300 bg-gradient-to-br from-green-900/30 to-green-800/20 scale-105 shadow-green-500/20' 
-                      : 'hover:scale-105 hover:shadow-lg'
+                      ? getEquippedRarityRingColor(item.rarity)
+                      : ''
                   } ${isItemUpgrade && !equippedBy ? 'ring-2 ring-green-400 shadow-lg' : ''}`}
-                  onMouseEnter={() => setHoveredItem(item.uniqueId || itemKey)}
-                  onMouseLeave={() => setHoveredItem(null)}
+                  onMouseEnter={equippedBy ? () => setHoveredItem(item.uniqueId || itemKey) : undefined}
+                  onMouseLeave={equippedBy ? () => setHoveredItem(null) : undefined}
                 >
                   {/* Rarity Badge */}
                   <div className="absolute top-0 left-0">
@@ -302,29 +322,31 @@ export const InventoryPanel: React.FC<InventoryPanelProps> = ({
                   {/* Equipped Indicator */}
                   {equippedBy && (
                     <div className="absolute top-0 right-0">
-                      <div className="bg-gradient-to-r from-green-600 to-green-500 text-white text-xs font-bold px-2 py-1 rounded-bl shadow-lg border border-green-300">
+                      <div className={`${getEquippedRarityBadgeColor(item.rarity)} text-xs font-bold px-2 py-1 rounded-bl shadow-lg`}>
                         ⚔️ {equippedBy}
                       </div>
                     </div>
                   )}
 
-                  {/* Custom Tooltip */}
-                  <ItemTooltip 
-                    item={item} 
-                    equippedBy={equippedBy} 
-                    isVisible={hoveredItem === (item.uniqueId || itemKey)} 
-                  />
+                  {/* Custom Tooltip - Only for equipped items */}
+                  {equippedBy && (
+                    <ItemTooltip 
+                      item={item} 
+                      equippedBy={equippedBy} 
+                      isVisible={hoveredItem === (item.uniqueId || itemKey)} 
+                    />
+                  )}
                   
                   {/* Item Name */}
                   <div className={`font-semibold text-xs text-center mt-4 truncate px-1 ${
-                    equippedBy ? 'text-green-200 font-bold' : 'text-white'
+                    equippedBy ? getEquippedRarityTextColor(item.rarity) : 'text-white'
                   }`}>
                     {item.name}
                   </div>
                   
                   {/* Stats */}
                   <div className={`text-xs text-center mt-1 ${
-                    equippedBy ? 'text-green-300 font-semibold' : 'text-gray-300'
+                    equippedBy ? getEquippedRarityStatsColor(item.rarity) : 'text-gray-300'
                   }`}>
                     <div>+{item.attackBonus} ATK</div>
                     <div>+{item.healthBonus} HP</div>

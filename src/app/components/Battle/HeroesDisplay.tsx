@@ -24,6 +24,12 @@ export const HeroesDisplay: React.FC<HeroesDisplayProps> = ({
 }) => {
   const [attackingHeroes, setAttackingHeroes] = useState<Set<string>>(new Set());
   const [takingDamage, setTakingDamage] = useState<Set<string>>(new Set());
+  const [tooltipData, setTooltipData] = useState<{
+    show: boolean;
+    x: number;
+    y: number;
+    content: React.ReactNode;
+  }>({ show: false, x: 0, y: 0, content: null });
 
   const getRarityBgColor = (rarity: string) => {
     switch (rarity) {
@@ -33,6 +39,17 @@ export const HeroesDisplay: React.FC<HeroesDisplayProps> = ({
       case 'rare': return 'bg-gradient-to-r from-blue-900/50 to-blue-800/50 border-blue-500/50';
       case 'common': return 'bg-gradient-to-r from-gray-900/50 to-gray-800/50 border-gray-500/50';
       default: return 'bg-gradient-to-r from-gray-900/50 to-gray-800/50 border-gray-500/50';
+    }
+  };
+
+  const getRarityTextColor = (rarity: string) => {
+    switch (rarity) {
+      case 'mythic': return 'text-purple-400';
+      case 'legendary': return 'text-orange-400';
+      case 'epic': return 'text-purple-400';
+      case 'rare': return 'text-blue-400';
+      case 'common': return 'text-gray-400';
+      default: return 'text-gray-400';
     }
   };
 
@@ -60,6 +77,57 @@ export const HeroesDisplay: React.FC<HeroesDisplayProps> = ({
     }, 2000);
     return () => clearInterval(interval);
   }, []);
+
+  // Handle mouse events for tooltips
+  const handleMouseEnter = (e: React.MouseEvent, gear: any, type: 'weapon' | 'armor') => {
+    if (!gear) return;
+    
+    const x = e.clientX + 10; // Offset from cursor
+    const y = e.clientY - 10; // Offset from cursor
+    
+    const content = (
+      <div className="px-3 py-2 bg-gray-900 border border-gray-600 text-white text-xs rounded-lg shadow-xl min-w-32">
+        <div className={`font-bold text-sm mb-1 ${getRarityTextColor(gear.rarity)}`}>{gear.name}</div>
+        {type === 'weapon' ? (
+          <>
+            <div className="mb-1">
+              ATK +{gear.attackBonus}
+            </div>
+            {gear.healthBonus > 0 && (
+              <div className="mb-1">
+                HP +{gear.healthBonus}
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            <div className="mb-1">
+              HP +{gear.healthBonus}
+            </div>
+            {gear.attackBonus > 0 && (
+              <div className="mb-1">
+                ATK +{gear.attackBonus}
+              </div>
+            )}
+          </>
+        )}
+        {gear.specialEffect && (
+          <div className="mb-1">
+            Special: {gear.specialEffect.toUpperCase()}
+          </div>
+        )}
+        <div className="capitalize font-semibold border-t border-gray-600 pt-1">
+          {gear.rarity} {type === 'weapon' ? 'Weapon' : 'Armor'}
+        </div>
+      </div>
+    );
+    
+    setTooltipData({ show: true, x, y, content });
+  };
+
+  const handleMouseLeave = () => {
+    setTooltipData({ show: false, x: 0, y: 0, content: null });
+  };
 
   return (
     <div className="bg-gray-800/90 rounded-lg p-4 h-full flex flex-col">
@@ -126,7 +194,11 @@ export const HeroesDisplay: React.FC<HeroesDisplayProps> = ({
                 {/* Equipped Gear */}
                 <div className="mt-1 flex gap-1">
                   {/* Weapon Slot */}
-                  <div className="relative group">
+                  <div 
+                    className="relative group"
+                    onMouseEnter={(e) => heroEquippedGear[heroName]?.weapon && handleMouseEnter(e, heroEquippedGear[heroName].weapon, 'weapon')}
+                    onMouseLeave={handleMouseLeave}
+                  >
                     <div className={`w-6 h-6 rounded border flex items-center justify-center transition-all duration-200 ${
                       heroEquippedGear[heroName]?.weapon 
                         ? getRarityBgColor(heroEquippedGear[heroName].weapon.rarity)
@@ -134,27 +206,14 @@ export const HeroesDisplay: React.FC<HeroesDisplayProps> = ({
                     } ${heroEquippedGear[heroName]?.weapon ? 'group-hover:scale-110 group-hover:shadow-lg' : ''}`}>
                       <span className="text-xs text-gray-400">⚔️</span>
                     </div>
-                    {/* Weapon Tooltip */}
-                    {heroEquippedGear[heroName]?.weapon && (
-                      <div className="fixed bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 border border-gray-600 text-white text-xs rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-[9999] min-w-32">
-                        <div className="font-bold text-sm mb-1">{heroEquippedGear[heroName].weapon.name}</div>
-                        <div className="text-green-400 mb-1">
-                          ATK +{heroEquippedGear[heroName].weapon.attackBonus}
-                        </div>
-                        {heroEquippedGear[heroName].weapon.healthBonus > 0 && (
-                          <div className="text-blue-400 mb-1">
-                            HP +{heroEquippedGear[heroName].weapon.healthBonus}
-                          </div>
-                        )}
-                        <div className="text-yellow-400 capitalize font-semibold border-t border-gray-600 pt-1">
-                          {heroEquippedGear[heroName].weapon.rarity} Weapon
-                        </div>
-                      </div>
-                    )}
                   </div>
                   
                   {/* Armor Slot */}
-                  <div className="relative group">
+                  <div 
+                    className="relative group"
+                    onMouseEnter={(e) => heroEquippedGear[heroName]?.armor && handleMouseEnter(e, heroEquippedGear[heroName].armor, 'armor')}
+                    onMouseLeave={handleMouseLeave}
+                  >
                     <div className={`w-6 h-6 rounded border flex items-center justify-center transition-all duration-200 ${
                       heroEquippedGear[heroName]?.armor 
                         ? getRarityBgColor(heroEquippedGear[heroName].armor.rarity)
@@ -162,23 +221,6 @@ export const HeroesDisplay: React.FC<HeroesDisplayProps> = ({
                     } ${heroEquippedGear[heroName]?.armor ? 'group-hover:scale-110 group-hover:shadow-lg' : ''}`}>
                       <span className="text-xs text-gray-400">🛡️</span>
                     </div>
-                    {/* Armor Tooltip */}
-                    {heroEquippedGear[heroName]?.armor && (
-                      <div className="fixed bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 border border-gray-600 text-white text-xs rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-[9999] min-w-32">
-                        <div className="font-bold text-sm mb-1">{heroEquippedGear[heroName].armor.name}</div>
-                        <div className="text-blue-400 mb-1">
-                          HP +{heroEquippedGear[heroName].armor.healthBonus}
-                        </div>
-                        {heroEquippedGear[heroName].armor.attackBonus > 0 && (
-                          <div className="text-green-400 mb-1">
-                            ATK +{heroEquippedGear[heroName].armor.attackBonus}
-                          </div>
-                        )}
-                        <div className="text-blue-400 capitalize font-semibold border-t border-gray-600 pt-1">
-                          {heroEquippedGear[heroName].armor.rarity} Armor
-                        </div>
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
@@ -233,6 +275,20 @@ export const HeroesDisplay: React.FC<HeroesDisplayProps> = ({
       {recruitedGenerals.length === 0 && (
         <div className="text-gray-400 text-center mt-8">
           No heroes recruited. Go to Army to recruit heroes!
+        </div>
+      )}
+      
+      {/* Cursor-following tooltip */}
+      {tooltipData.show && (
+        <div 
+          className="fixed pointer-events-none z-[9999]"
+          style={{ 
+            left: tooltipData.x, 
+            top: tooltipData.y,
+            transform: 'translate(-50%, -100%)'
+          }}
+        >
+          {tooltipData.content}
         </div>
       )}
     </div>

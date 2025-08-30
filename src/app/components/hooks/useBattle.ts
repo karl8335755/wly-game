@@ -66,7 +66,7 @@ export const useBattle = () => {
 
   // Game loop function
   const gameLoop = useCallback((onLootDrop: (item: any) => any[] | void) => {
-    console.log('Game loop running, turn:', battleStateRef.current.currentTurn + 1);
+
     const currentState = battleStateRef.current;
     const newCurrentLevel = currentState.currentLevel;
     const newSoldiers = [...currentState.soldiers];
@@ -76,13 +76,11 @@ export const useBattle = () => {
     const newCurrentTurn = currentState.currentTurn + 1;
 
     // Check if all soldiers are defeated
-    console.log(`Game loop turn ${newCurrentTurn}: Soldiers health:`, newSoldiers);
+
     if (newSoldiers.every(health => health <= 0)) {
       // Mark level as completed
-      console.log(`Level ${newCurrentLevel} completed! Adding to completedLevels`);
       setCompletedLevels(prev => {
         const newSet = new Set([...prev, newCurrentLevel]);
-        console.log('Updated completedLevels:', Array.from(newSet));
         return newSet;
       });
       
@@ -184,57 +182,53 @@ export const useBattle = () => {
               newBattleLog.push(`${hero.name} reached level ${newHeroes[heroIndex].level}! Attack +2, HP +10!`);
             }
             
-            // Loot dropping logic - only one item per turn
-            if (!currentState.itemDroppedThisTurn) {
-              console.log('Checking loot drop for defeated enemy...');
-              const allCurrentItems = onLootDrop({}) as any[]; // Get current items count
-              console.log('Current items count:', allCurrentItems?.length || 0);
-              if (allCurrentItems && allCurrentItems.length >= 20) {
-                newBattleLog.push('Inventory full! No more items can be collected.');
-                console.log('Inventory full, skipping loot drop');
-              } else {
-                const dropRates = getDropRates(newCurrentLevel);
-                const baseDropChance = 0.5; // 50% per enemy (temporarily increased for testing)
-                
-                const random = Math.random();
-                console.log(`Loot check: random=${random.toFixed(3)}, threshold=${baseDropChance}, will drop: ${random < baseDropChance}`);
-                if (random < baseDropChance) {
-                  const rarity = selectRarity(dropRates);
-                  console.log(`Dropping item: rarity=${rarity}, dropRates=`, dropRates);
-                  const droppedItem = generateItem(rarity, newCurrentLevel);
-                  console.log('Generated item:', droppedItem);
-                  const uniqueId = generateUniqueId(droppedItem.id);
-                  console.log(`Battle hook generated uniqueId: ${uniqueId} for item: ${droppedItem.name}`);
-                  
-                  try {
-                    const result = onLootDrop({
-                      ...droppedItem,
-                      uniqueId,
-                      owner: 'All Heroes'
-                    });
-                    console.log('onLootDrop result:', result);
-                    
-                    newBattleLog.push(`黄巾军 ${targetIndex + 1} dropped ${droppedItem.name}!`);
-                    console.log(`Successfully dropped: ${droppedItem.name}`);
-                    
-                    // Mark that an item was dropped this turn
-                    currentState.itemDroppedThisTurn = true;
-                  } catch (error) {
-                    console.error('Error in onLootDrop:', error);
-                  }
-                } else {
-                  console.log('Loot drop failed - random check');
-                }
-              }
-            } else {
-              console.log('Item already dropped this turn, skipping loot drop');
-            }
+            // Track defeated enemies for loot dropping (moved outside hero attacks)
           }
         }
       }
     });
 
-            // 黄巾军 attacks
+    // Loot dropping logic - check for defeated enemies after all hero attacks
+    if (!currentState.itemDroppedThisTurn) {
+      const allCurrentItems = onLootDrop({}) as any[]; // Get current items count
+      if (allCurrentItems && allCurrentItems.length >= 20) {
+        newBattleLog.push('Inventory full! No more items can be collected.');
+      } else {
+        const dropRates = getDropRates(newCurrentLevel);
+        const baseDropChance = 0.3; // 30% chance per defeated enemy
+        
+        // Check each defeated enemy for loot
+        let itemDroppedThisTurn = false;
+        newSoldiers.forEach((soldierHealth, soldierIndex) => {
+          if (soldierHealth <= 0 && !itemDroppedThisTurn) {
+            const random = Math.random();
+            if (random < baseDropChance) {
+              const rarity = selectRarity(dropRates);
+              const droppedItem = generateItem(rarity, newCurrentLevel);
+              const uniqueId = generateUniqueId(droppedItem.id);
+              
+              try {
+                onLootDrop({
+                  ...droppedItem,
+                  uniqueId,
+                  owner: 'All Heroes'
+                });
+                
+                newBattleLog.push(`黄巾军 ${soldierIndex + 1} dropped ${droppedItem.name}!`);
+                
+                // Mark that an item was dropped this turn
+                itemDroppedThisTurn = true;
+                currentState.itemDroppedThisTurn = true;
+              } catch (error) {
+                console.error('Error in onLootDrop:', error);
+              }
+            }
+          }
+        });
+      }
+    }
+
+    // 黄巾军 attacks
     newSoldiers.forEach((soldierHealth, soldierIndex) => {
       if (soldierHealth > 0) {
         const targetHero = newHeroes.find(hero => hero.health > 0);
@@ -283,7 +277,6 @@ export const useBattle = () => {
   const startBattle = useCallback((recruitedGenerals: string[], onLootDrop: (item: any) => any[] | void) => {
     // Store the onLootDrop callback for use in toggleSpeed
     onLootDropRef.current = onLootDrop;
-    console.log('startBattle called with onLootDrop:', onLootDrop);
     
     // Initialize heroes in battle
     const initialHeroes = recruitedGenerals.map(heroName => {
@@ -300,14 +293,12 @@ export const useBattle = () => {
     });
     
     // Set heroes first, then start battle after a small delay to ensure state is updated
-    console.log('Setting heroes in battle:', initialHeroes);
     setHeroesInBattle(initialHeroes);
 
     // Use current state from ref to avoid stale closure
     const currentState = battleStateRef.current;
     const soldierCount = Math.min(currentState.currentLevel, 10);
     const soldierHP = Math.max(50, 100 - (currentState.currentLevel - 1) * 10);
-    console.log(`Starting battle: Level ${currentState.currentLevel}, ${soldierCount} soldiers with ${soldierHP} HP each`);
 
     // Start battle state first
     setBattleState(prev => ({
@@ -321,9 +312,7 @@ export const useBattle = () => {
     // Start game loop after a small delay to ensure heroes are set
     setTimeout(() => {
       const interval = currentState.speed === 1 ? 2000 : 1000; // 1x = 2s, 2x = 1s
-      console.log('Starting game loop with interval:', interval, 'ms');
       const gameLoopId = setInterval(() => {
-        console.log('Game loop interval triggered');
         gameLoop(onLootDrop);
       }, interval);
       setBattleState(prev => ({
@@ -338,9 +327,7 @@ export const useBattle = () => {
     // Store the onLootDrop callback for use in toggleSpeed
     onLootDropRef.current = onLootDrop;
     // Check if current level is completed before allowing progression
-    console.log(`Attempting to go to next level. Current level: ${battleState.currentLevel}, Completed levels:`, Array.from(completedLevels));
     if (!completedLevels.has(battleState.currentLevel)) {
-      console.log(`Cannot proceed to next level. Level ${battleState.currentLevel} not completed.`);
       return;
     }
     
@@ -430,35 +417,28 @@ const getDropRates = (level: number) => {
   } else {
     rates = { common: 0.7, rare: 0.25, epic: 0.05, legendary: 0, mythic: 0 };
   }
-  console.log(`Drop rates for level ${level}:`, rates);
   return rates;
 };
 
 const selectRarity = (dropRates: any) => {
   const random = Math.random();
   let cumulative = 0;
-  console.log('Selecting rarity with random:', random.toFixed(3), 'dropRates:', dropRates);
   for (const [rarity, rate] of Object.entries(dropRates)) {
     cumulative += rate as number;
-    console.log(`Checking ${rarity}: cumulative=${cumulative.toFixed(3)}, will select: ${random <= cumulative}`);
     if (random <= cumulative) return rarity;
   }
-  console.log('Falling back to common');
   return 'common';
 };
 
 const generateItem = (rarity: string, _level: number) => {
   const itemsOfRarity = gearData.filter(item => item.rarity === rarity);
-  console.log(`Generating ${rarity} item. Found ${itemsOfRarity.length} items of this rarity`);
   
   if (itemsOfRarity.length === 0) {
     // Fallback to common if no items of that rarity
     const commonItems = gearData.filter(item => item.rarity === 'common');
-    console.log('No items of rarity found, falling back to common. Found', commonItems.length, 'common items');
     return { ...commonItems[0], owner: 'All Heroes' };
   }
   
   const randomItem = itemsOfRarity[Math.floor(Math.random() * itemsOfRarity.length)];
-  console.log('Selected item:', randomItem.name, 'Type:', randomItem.type);
   return { ...randomItem, owner: 'All Heroes' };
 };

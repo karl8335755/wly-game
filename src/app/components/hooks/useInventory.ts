@@ -50,7 +50,12 @@ export const useInventory = () => {
       }
     });
     
-    return allItems.sort((a, b) => {
+    // Remove any duplicates that might have slipped through
+    const uniqueItems = allItems.filter((item, index, self) => 
+      index === self.findIndex(t => t.uniqueId === item.uniqueId)
+    );
+    
+    return uniqueItems.sort((a, b) => {
       // Sort by rarity first (mythic > legendary > epic > rare > common)
       const rarityOrder = { mythic: 5, legendary: 4, epic: 3, rare: 2, common: 1 };
       const rarityDiff = rarityOrder[b.rarity] - rarityOrder[a.rarity];
@@ -70,18 +75,33 @@ export const useInventory = () => {
 
   // Add item to inventory
   const addItemToInventory = (item: InventoryItem) => {
-    console.log('addItemToInventory called with:', item);
-    console.log('Item uniqueId:', item.uniqueId);
-    console.log('Item has uniqueId:', !!item.uniqueId);
     const allItems = getAllItems();
-    console.log('Current inventory size:', allItems.length, 'Max slots:', INVENTORY_SLOTS);
     if (allItems.length >= INVENTORY_SLOTS) {
       setSellMessage('📦 Inventory full! Cannot collect more items.');
       setTimeout(() => setSellMessage(''), 3000);
-      console.log('Inventory full, cannot add item');
       return false;
     }
 
+    // Check if this item already exists in inventory
+    const existingItems = getAllItems();
+    if (item.uniqueId && existingItems.some(existing => existing.uniqueId === item.uniqueId)) {
+      return false;
+    }
+    
+    // Double-check: also check if the item exists by its properties (in case uniqueId is missing)
+    const duplicateByProperties = existingItems.some(existing => 
+      existing.id === item.id && 
+      existing.name === item.name && 
+      existing.type === item.type &&
+      existing.rarity === item.rarity &&
+      existing.attackBonus === item.attackBonus &&
+      existing.healthBonus === item.healthBonus
+    );
+    
+    if (duplicateByProperties) {
+      return false;
+    }
+    
     // Only generate uniqueId if it doesn't already exist
     let itemWithUniqueId = { ...item };
     
@@ -90,9 +110,7 @@ export const useInventory = () => {
         ...item,
         uniqueId: generateUniqueId(item.id)
       };
-      console.log('Generated new uniqueId:', itemWithUniqueId.uniqueId);
     } else {
-      console.log('Using existing uniqueId:', item.uniqueId);
       // Register the existing uniqueId to prevent future duplicates
       registerUniqueId(item.uniqueId);
       itemWithUniqueId = { ...item }; // Keep the existing uniqueId
@@ -104,11 +122,9 @@ export const useInventory = () => {
         ...prev,
         [owner]: [...(prev[owner] || []), itemWithUniqueId]
       };
-      console.log('Updated hero inventories:', updated);
       return updated;
     });
 
-    console.log('Item added to inventory successfully with uniqueId:', itemWithUniqueId.uniqueId);
     return true;
   };
 
@@ -116,38 +132,40 @@ export const useInventory = () => {
   const equipItem = (item: InventoryItem, heroName: string) => {
     setHeroEquippedGear(prev => {
       const currentGear = prev[heroName] || { weapon: null, armor: null };
+      const previouslyEquippedItem = currentGear[item.type];
       
-      // Unequip existing item of same type
-      if (currentGear[item.type]) {
-        // Add back to inventory
-        setHeroInventories(invPrev => {
-          const owner = item.originalOwner || 'All Heroes';
-          return {
-            ...invPrev,
-            [owner]: [...(invPrev[owner] || []), currentGear[item.type]!]
-          };
-        });
-      }
-
-      // Remove from inventory
-      setHeroInventories(invPrev => {
-        const owner = item.originalOwner || 'All Heroes';
-        return {
-          ...invPrev,
-          [owner]: (invPrev[owner] || []).filter(invItem => invItem.uniqueId !== item.uniqueId)
-        };
-      });
-
-      return {
+      // Update equipped gear first
+      const newEquippedGear = {
         ...prev,
         [heroName]: {
           ...currentGear,
           [item.type]: item
         }
       };
+      
+      // Then update inventory in a single operation to avoid duplicates
+      setHeroInventories(invPrev => {
+        const owner = item.originalOwner || 'All Heroes';
+        const currentInventory = invPrev[owner] || [];
+        
+        // Remove the item being equipped
+        const inventoryWithoutEquippedItem = currentInventory.filter(invItem => invItem.uniqueId !== item.uniqueId);
+        
+        // Add back the previously equipped item (if any)
+        const finalInventory = previouslyEquippedItem 
+          ? [...inventoryWithoutEquippedItem, previouslyEquippedItem]
+          : inventoryWithoutEquippedItem;
+        
+        return {
+          ...invPrev,
+          [owner]: finalInventory
+        };
+      });
+      
+      return newEquippedGear;
     });
 
-          // setSellMessage(`⚔️ ${item.name} equipped to ${heroName}!`);
+    setSellMessage(`⚔️ ${item.name} equipped to ${heroName}!`);
     setTimeout(() => setSellMessage(''), 3000);
   };
 

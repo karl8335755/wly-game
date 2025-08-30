@@ -26,7 +26,6 @@ export default function Home() {
     addFood,
     upgradeCity,
     recruitGeneral,
-    removeGeneral,
     getCurrentPopulationUsed,
     changeScreen
   } = useGameState();
@@ -55,26 +54,17 @@ export default function Home() {
 
   // Handle loot drops from battle
   const handleLootDrop = (item: any) => {
-    console.log('handleLootDrop called with:', item);
     if (item && item.id) {
       // This is a new item being dropped
-      console.log('Adding new item to inventory:', item);
-      console.log('Item uniqueId before adding to inventory:', item.uniqueId);
       // Use the uniqueId that was already generated in the battle hook
       const newItem = {
         ...item,
         originalOwner: item.owner || 'All Heroes'
       };
       addItemToInventory(newItem);
-      console.log('Item added to inventory successfully');
-      
-      // Debug: Log registry info
-      const registryInfo = getUniqueIdRegistryInfo();
-      console.log('UniqueId Registry Info:', registryInfo);
     } else {
       // This is a request to get current items count
       const items = getAllItems();
-      console.log('Returning current items count:', items.length);
       return items;
     }
   };

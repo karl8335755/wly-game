@@ -104,12 +104,7 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({
               sellMessage={sellMessage}
               heroEquippedGear={heroEquippedGear}
             />
-            {/* Debug: Show heroEquippedGear */}
-            {process.env.NODE_ENV === 'development' && (
-              <div className="text-xs text-gray-400 mt-2">
-                Debug - heroEquippedGear: {JSON.stringify(heroEquippedGear, null, 2)}
-              </div>
-            )}
+
           </div>
         </div>
       </div>
