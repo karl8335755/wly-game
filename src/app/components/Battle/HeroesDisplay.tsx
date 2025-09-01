@@ -151,7 +151,7 @@ export const HeroesDisplay: React.FC<HeroesDisplayProps> = ({
             <div
               key={heroName}
               onClick={() => onSelectHero(heroName)}
-              className={`relative bg-gray-700 rounded-lg p-2 flex items-center gap-3 transition-all duration-200 cursor-pointer ${
+              className={`relative bg-gray-700 rounded-lg p-2 flex items-center gap-3 transition-all duration-200 cursor-pointer overflow-hidden ${
                 currentHealth <= 0 ? 'opacity-50' : 'hover:bg-gray-600'
               } ${
                 isAttacking ? 'animate-pulse bg-yellow-600/50' : ''
@@ -226,7 +226,7 @@ export const HeroesDisplay: React.FC<HeroesDisplayProps> = ({
               </div>
 
               {/* Right side - Status */}
-              <div className="flex-1 min-w-0">
+              <div className="flex-1 min-w-0 overflow-hidden">
                 <div className="text-xs font-semibold text-gray-300 mb-1">
                   {heroName} <span className="text-blue-400">Lv.{battleHero?.level || 1}</span>
                 </div>
@@ -253,8 +253,8 @@ export const HeroesDisplay: React.FC<HeroesDisplayProps> = ({
                 </div>
                 
                 {/* Experience Bar */}
-                <div>
-                  <div className="w-full bg-gray-600 rounded-full h-1">
+                <div className="flex items-center gap-1">
+                  <div className="flex-1 bg-gray-600 rounded-full h-1">
                     <div
                       className="h-1 rounded-full bg-blue-500 transition-all duration-200"
                       style={{ 
@@ -262,8 +262,8 @@ export const HeroesDisplay: React.FC<HeroesDisplayProps> = ({
                       }}
                     />
                   </div>
-                  <div className="text-xs text-gray-400 mt-0.5" style={{ fontSize: '10px' }}>
-                    {battleHero?.experience || 0}/{battleHero?.experienceToNextLevel || 10} XP
+                  <div className="text-xs text-gray-400" style={{ fontSize: '9px', minWidth: 'fit-content' }}>
+                    {battleHero?.experience || 0}/{battleHero?.experienceToNextLevel || 10}
                   </div>
                 </div>
               </div>

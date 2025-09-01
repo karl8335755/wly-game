@@ -48,6 +48,7 @@ export default function Home() {
     heroesInBattle,
     startBattle,
     nextLevel,
+    changeToLevel,
     stopBattle,
     toggleSpeed
   } = useBattle();
@@ -61,7 +62,12 @@ export default function Home() {
         ...item,
         originalOwner: item.owner || 'All Heroes'
       };
-      addItemToInventory(newItem);
+      const result = addItemToInventory(newItem);
+      
+      // If item was auto-sold, add the gold
+      if (result && result.autoSold && result.value > 0) {
+        addGold(result.value);
+      }
     } else {
       // This is a request to get current items count
       const items = getAllItems();
@@ -93,6 +99,11 @@ export default function Home() {
   // Handle next level
   const handleNextLevel = () => {
     nextLevel(handleLootDrop);
+  };
+
+  // Handle change to specific level
+  const handleChangeToLevel = (level: number) => {
+    changeToLevel(level, handleLootDrop);
   };
 
   // Handle back to city
@@ -151,6 +162,7 @@ export default function Home() {
             onSelectHero={setSelectedHero}
             onStartBattle={handleStartBattle}
             onNextLevel={handleNextLevel}
+            onChangeToLevel={handleChangeToLevel}
             onBackToCity={handleBackToCity}
             onEquipItem={handleEquipItem}
             onSellItem={handleSellItem}
@@ -164,8 +176,24 @@ export default function Home() {
         {currentScreen === 'shop' && (
           <ShopScreen
             resources={resources}
+            currentLevel={battleState.currentLevel}
             onAddGold={addGold}
             onAddFood={addFood}
+            onPurchaseItem={(item) => {
+              const price = item.rarity === 'uncommon' ? 500 :
+                           item.rarity === 'rare' ? 1000 : 
+                           item.rarity === 'epic' ? 2500 :
+                           item.rarity === 'legendary' ? 5000 : 15000;
+              if (resources.gold >= price) {
+                addGold(-price); // Spend gold
+                const newItem = {
+                  ...item,
+                  originalOwner: 'Shop Purchase',
+                  uniqueId: `${item.id}_shop_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+                };
+                addItemToInventory(newItem);
+              }
+            }}
           />
         )}
       </div>

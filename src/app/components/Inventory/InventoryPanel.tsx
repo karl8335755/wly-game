@@ -13,8 +13,15 @@ const ItemTooltip: React.FC<{ item: InventoryItem; equippedBy: string | null; is
     <div className="absolute z-50 bg-gray-900 border border-gray-600 rounded-lg p-3 shadow-xl text-white text-sm min-w-48 -top-2 left-full ml-2">
       <div className="font-bold text-lg mb-2">{item.name}</div>
       <div className="text-gray-300 mb-1">{item.rarity} {item.type}</div>
-      <div className="text-green-400 mb-1">+{item.attackBonus} ATK</div>
-      <div className="text-blue-400 mb-2">+{item.healthBonus} HP</div>
+      {item.type === 'weapon' && (
+        <div className="text-green-400 mb-2">+{item.attackBonus} ATK</div>
+      )}
+      {item.type === 'armor' && (
+        <div className="text-blue-400 mb-2">+{item.healthBonus} HP</div>
+      )}
+      {item.specialEffect && (
+        <div className="text-orange-400 mb-2">Special: {item.specialEffect}</div>
+      )}
       {equippedBy && (
         <div className="text-yellow-400 font-semibold border-t border-gray-600 pt-2">
           Equipped by {equippedBy}
@@ -48,7 +55,6 @@ export const InventoryPanel: React.FC<InventoryPanelProps> = ({
   sellMessage,
   heroEquippedGear
 }) => {
-  const [sortOrder, setSortOrder] = useState<'strongest' | 'weakest'>('strongest');
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
 
   const heroOptions = ['刘备', '关羽', '张飞', '诸葛亮'];
@@ -59,6 +65,7 @@ export const InventoryPanel: React.FC<InventoryPanelProps> = ({
       case 'legendary': return 'text-orange-400 bg-orange-900/30';
       case 'epic': return 'text-purple-400 bg-purple-900/30';
       case 'rare': return 'text-blue-400 bg-blue-900/30';
+      case 'uncommon': return 'text-green-400 bg-green-900/30';
       case 'common': return 'text-gray-400 bg-gray-900/30';
       default: return 'text-gray-400 bg-gray-900/30';
     }
@@ -70,6 +77,7 @@ export const InventoryPanel: React.FC<InventoryPanelProps> = ({
       case 'legendary': return 'bg-gradient-to-r from-orange-900/50 to-orange-800/50 border-orange-500/50';
       case 'epic': return 'bg-gradient-to-r from-purple-900/50 to-purple-800/50 border-purple-500/50';
       case 'rare': return 'bg-gradient-to-r from-blue-900/50 to-blue-800/50 border-blue-500/50';
+      case 'uncommon': return 'bg-gradient-to-r from-green-900/50 to-green-800/50 border-green-500/50';
       case 'common': return 'bg-gradient-to-r from-gray-900/50 to-gray-800/50 border-gray-500/50';
       default: return 'bg-gradient-to-r from-gray-900/50 to-gray-800/50 border-gray-500/50';
     }
@@ -81,6 +89,7 @@ export const InventoryPanel: React.FC<InventoryPanelProps> = ({
       case 'legendary': return 'bg-gradient-to-br from-orange-900/80 to-orange-800/60 border-orange-400 scale-105 shadow-orange-500/30 hover:scale-110 hover:shadow-lg';
       case 'epic': return 'bg-gradient-to-br from-purple-900/80 to-purple-800/60 border-purple-400 scale-105 shadow-purple-500/30 hover:scale-110 hover:shadow-lg';
       case 'rare': return 'bg-gradient-to-br from-blue-900/80 to-blue-800/60 border-blue-400 scale-105 shadow-blue-500/30 hover:scale-110 hover:shadow-lg';
+      case 'uncommon': return 'bg-gradient-to-br from-green-900/80 to-green-800/60 border-green-400 scale-105 shadow-green-500/30 hover:scale-110 hover:shadow-lg';
       case 'common': return 'bg-gradient-to-br from-gray-900/80 to-gray-800/60 border-gray-400 scale-105 shadow-gray-500/30 hover:scale-110 hover:shadow-lg';
       default: return 'bg-gradient-to-br from-gray-900/80 to-gray-800/60 border-gray-400 scale-105 shadow-gray-500/30 hover:scale-110 hover:shadow-lg';
     }
@@ -92,6 +101,7 @@ export const InventoryPanel: React.FC<InventoryPanelProps> = ({
       case 'legendary': return 'ring-3 ring-orange-400 shadow-xl';
       case 'epic': return 'ring-3 ring-purple-400 shadow-xl';
       case 'rare': return 'ring-3 ring-blue-400 shadow-xl';
+      case 'uncommon': return 'ring-3 ring-green-400 shadow-xl';
       case 'common': return 'ring-3 ring-gray-400 shadow-xl';
       default: return 'ring-3 ring-gray-400 shadow-xl';
     }
@@ -103,6 +113,7 @@ export const InventoryPanel: React.FC<InventoryPanelProps> = ({
       case 'legendary': return 'text-orange-200 font-bold';
       case 'epic': return 'text-purple-200 font-bold';
       case 'rare': return 'text-blue-200 font-bold';
+      case 'uncommon': return 'text-green-200 font-bold';
       case 'common': return 'text-gray-200 font-bold';
       default: return 'text-gray-200 font-bold';
     }
@@ -114,6 +125,7 @@ export const InventoryPanel: React.FC<InventoryPanelProps> = ({
       case 'legendary': return 'text-orange-300 font-semibold';
       case 'epic': return 'text-purple-300 font-semibold';
       case 'rare': return 'text-blue-300 font-semibold';
+      case 'uncommon': return 'text-green-300 font-semibold';
       case 'common': return 'text-gray-300 font-semibold';
       default: return 'text-gray-300 font-semibold';
     }
@@ -125,6 +137,7 @@ export const InventoryPanel: React.FC<InventoryPanelProps> = ({
       case 'legendary': return 'bg-gradient-to-r from-orange-600 to-orange-500 text-white border-orange-400';
       case 'epic': return 'bg-gradient-to-r from-purple-600 to-purple-500 text-white border-purple-400';
       case 'rare': return 'bg-gradient-to-r from-blue-600 to-blue-500 text-white border-blue-400';
+      case 'uncommon': return 'bg-gradient-to-r from-green-600 to-green-500 text-white border-green-400';
       case 'common': return 'bg-gradient-to-r from-gray-600 to-gray-500 text-white border-gray-400';
       default: return 'bg-gradient-to-r from-gray-600 to-gray-500 text-white border-gray-400';
     }
@@ -168,7 +181,7 @@ export const InventoryPanel: React.FC<InventoryPanelProps> = ({
     }
 
     // If stats are equal, check rarity (higher rarity is better)
-    const rarityOrder = { common: 1, rare: 2, epic: 3, legendary: 4, mythic: 5 };
+    const rarityOrder = { common: 1, uncommon: 2, rare: 3, epic: 4, legendary: 5, mythic: 6 };
     const itemRarity = rarityOrder[item.rarity] || 1;
     const equippedRarity = rarityOrder[equippedItem.rarity] || 1;
 
@@ -199,7 +212,7 @@ export const InventoryPanel: React.FC<InventoryPanelProps> = ({
     if (statDiff > 0) {
       return `+${statDiff} Stats`;
     } else if (statDiff === 0) {
-      const rarityOrder = { common: 1, rare: 2, epic: 3, legendary: 4, mythic: 5 };
+      const rarityOrder = { common: 1, uncommon: 2, rare: 3, epic: 4, legendary: 5, mythic: 6 };
       const itemRarity = rarityOrder[item.rarity] || 1;
       const equippedRarity = rarityOrder[equippedItem.rarity] || 1;
       
@@ -211,7 +224,7 @@ export const InventoryPanel: React.FC<InventoryPanelProps> = ({
     return '';
   };
 
-  // Sort items by strength
+    // Sort items by strength (always strongest first)
   const sortedItems = useMemo(() => {
     const sorted = [...allItems].sort((a, b) => {
       // Calculate total stats for each item
@@ -220,50 +233,42 @@ export const InventoryPanel: React.FC<InventoryPanelProps> = ({
       
       // If stats are equal, sort by rarity
       if (aTotalStats === bTotalStats) {
-        const rarityOrder = { common: 1, rare: 2, epic: 3, legendary: 4, mythic: 5 };
+        const rarityOrder = { common: 1, uncommon: 2, rare: 3, epic: 4, legendary: 5, mythic: 6 };
         const aRarity = rarityOrder[a.rarity] || 1;
         const bRarity = rarityOrder[b.rarity] || 1;
         
-        if (sortOrder === 'strongest') {
-          return bRarity - aRarity; // Higher rarity first
-        } else {
-          return aRarity - bRarity; // Lower rarity first
-        }
+        return bRarity - aRarity; // Higher rarity first
       }
       
-      // Sort by total stats
-      if (sortOrder === 'strongest') {
-        return bTotalStats - aTotalStats; // Higher stats first
-      } else {
-        return aTotalStats - bTotalStats; // Lower stats first
-      }
+      // Sort by total stats (strongest first)
+      return bTotalStats - aTotalStats; // Higher stats first
     });
     
     return sorted;
-  }, [allItems, sortOrder]);
+  }, [allItems]);
 
   return (
     <div className="bg-gray-800/90 rounded-lg p-4 h-64 flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
-        <div>
-          <h2 className="text-lg font-bold text-white">Inventory</h2>
-          {selectedHero && (
-            <div className="text-xs text-blue-400">
-              Selected: {selectedHero}
+        <div className="flex items-center gap-3">
+          <div>
+            <h2 className="text-lg font-bold text-white">Inventory</h2>
+            {selectedHero && (
+              <div className="text-xs text-blue-400">
+                Selected: {selectedHero}
+              </div>
+            )}
+          </div>
+          {/* Sell Message - Next to title */}
+          {sellMessage && (
+            <div className="text-white text-sm font-semibold bg-gray-800/50 px-2 py-1 rounded border border-gray-600">
+              {sellMessage}
             </div>
           )}
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-400">{allItems.length}/20</span>
-          {allItems.length > 1 && (
-            <button
-              onClick={() => setSortOrder(sortOrder === 'strongest' ? 'weakest' : 'strongest')}
-              className="px-3 py-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-xs font-semibold rounded transition-all duration-200"
-            >
-              {sortOrder === 'strongest' ? 'Strongest' : 'Weakest'}
-            </button>
-          )}
           {allItems.length > 0 && (
             <button
               onClick={onSellAllItems}
@@ -274,15 +279,6 @@ export const InventoryPanel: React.FC<InventoryPanelProps> = ({
           )}
         </div>
       </div>
-
-      {/* Sell Message */}
-      {sellMessage && (
-        <div className="mb-3 text-center text-green-400 text-sm font-semibold">
-          {sellMessage}
-        </div>
-      )}
-
-
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
@@ -323,7 +319,7 @@ export const InventoryPanel: React.FC<InventoryPanelProps> = ({
                   {equippedBy && (
                     <div className="absolute top-0 right-0">
                       <div className={`${getEquippedRarityBadgeColor(item.rarity)} text-xs font-bold px-2 py-1 rounded-bl shadow-lg`}>
-                        ⚔️ {equippedBy}
+                        {equippedBy}
                       </div>
                     </div>
                   )}
@@ -348,8 +344,15 @@ export const InventoryPanel: React.FC<InventoryPanelProps> = ({
                   <div className={`text-xs text-center mt-1 ${
                     equippedBy ? getEquippedRarityStatsColor(item.rarity) : 'text-gray-300'
                   }`}>
-                    <div>+{item.attackBonus} ATK</div>
-                    <div>+{item.healthBonus} HP</div>
+                    {item.type === 'weapon' && (
+                      <div>+{item.attackBonus} ATK</div>
+                    )}
+                    {item.type === 'armor' && (
+                      <div>+{item.healthBonus} HP</div>
+                    )}
+                    {item.specialEffect && (
+                      <div className="text-orange-400">AOE</div>
+                    )}
                   </div>
 
                   {/* Upgrade Suggestion */}

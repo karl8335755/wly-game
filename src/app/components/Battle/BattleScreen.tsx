@@ -9,7 +9,7 @@ import { InventoryItem } from '../hooks/useInventory';
 
 interface BattleScreenProps {
   battleState: BattleState;
-  completedLevels: Set<number>;
+  completedLevels: Set<string>;
   heroesInBattle: HeroInBattle[];
   recruitedGenerals: string[];
   allItems: InventoryItem[];
@@ -17,6 +17,7 @@ interface BattleScreenProps {
   onSelectHero: (heroName: string) => void;
   onStartBattle: () => void;
   onNextLevel: () => void;
+  onChangeToLevel: (level: number) => void;
   onBackToCity: () => void;
   onEquipItem: (item: InventoryItem) => void;
   onSellItem: (item: InventoryItem) => void;
@@ -41,6 +42,7 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({
   onSelectHero,
   onStartBattle,
   onNextLevel,
+  onChangeToLevel,
   onBackToCity,
   onEquipItem,
   onSellItem,
@@ -58,6 +60,7 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({
         recruitedGenerals={recruitedGenerals}
         onStartBattle={onStartBattle}
         onNextLevel={onNextLevel}
+        onChangeToLevel={onChangeToLevel}
         onBackToCity={onBackToCity}
         onToggleSpeed={onToggleSpeed}
       />

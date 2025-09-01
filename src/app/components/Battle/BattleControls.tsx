@@ -1,12 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BattleState } from '../hooks/useBattle';
+import { DropRateDisplay } from './DropRateDisplay';
 
 interface BattleControlsProps {
   battleState: BattleState;
-  completedLevels: Set<number>;
+  completedLevels: Set<string>;
   recruitedGenerals: string[];
   onStartBattle: () => void;
   onNextLevel: () => void;
+  onChangeToLevel: (level: number) => void;
   onBackToCity: () => void;
   onToggleSpeed: () => void;
 }
@@ -17,12 +19,15 @@ export const BattleControls: React.FC<BattleControlsProps> = ({
   recruitedGenerals,
   onStartBattle,
   onNextLevel,
+  onChangeToLevel,
   onBackToCity,
   onToggleSpeed
 }) => {
+  const [hoveredLevel, setHoveredLevel] = useState<number | null>(null);
   const canStartBattle = recruitedGenerals.length > 0;
   // You can proceed to next level if the current level is completed
-  const canProceedToNextLevel = completedLevels.has(battleState.currentLevel);
+  const currentLevelKey = `${battleState.currentChapter}-${battleState.currentLevel}`;
+  const canProceedToNextLevel = completedLevels.has(currentLevelKey);
   const nextLevel = battleState.currentLevel + 1;
 
   return (
@@ -31,7 +36,7 @@ export const BattleControls: React.FC<BattleControlsProps> = ({
 
       {/* Debug: Show completed levels */}
       <div className="text-xs text-gray-400 mb-4">
-        Completed: {Array.from(completedLevels).join(', ') || 'None'} | Current: {battleState.currentLevel} | Can Proceed: {canProceedToNextLevel ? 'Yes' : 'No'}
+        Chapter: {battleState.currentChapter} | Completed: {Array.from(completedLevels).join(', ') || 'None'} | Current: {battleState.currentLevel} | Can Proceed: {canProceedToNextLevel ? 'Yes' : 'No'}
       </div>
 
       {/* Battle Control Buttons and Level Progress */}
@@ -109,13 +114,14 @@ export const BattleControls: React.FC<BattleControlsProps> = ({
         </div>
 
         {/* Level Progress Grid */}
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-gray-300 font-semibold">Level Progress:</span>
+        <div className="flex items-center gap-3 relative">
+          <span className="text-sm text-gray-300 font-semibold">Chapter {battleState.currentChapter} - Level Progress:</span>
           <div className="flex gap-1">
             {Array.from({ length: 10 }, (_, i) => i + 1).map((level) => {
+              const levelKey = `${battleState.currentChapter}-${level}`;
               const isCurrent = level === battleState.currentLevel;
-              const isCompleted = completedLevels.has(level);
-              const isLocked = level > 1 && !completedLevels.has(level - 1);
+              const isCompleted = completedLevels.has(levelKey);
+              const isLocked = level > 1 && !completedLevels.has(`${battleState.currentChapter}-${level - 1}`);
 
               let bgColor = 'bg-gray-600';
               let textColor = 'text-gray-400';
@@ -134,13 +140,40 @@ export const BattleControls: React.FC<BattleControlsProps> = ({
               return (
                 <div
                   key={level}
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${bgColor} ${textColor}`}
+                  onClick={() => {
+                    // Only allow clicking on unlocked levels (completed or level 1)
+                    const isUnlocked = level === 1 || completedLevels.has(`${battleState.currentChapter}-${level - 1}`);
+                    if (isUnlocked && level !== battleState.currentLevel) {
+                      onChangeToLevel(level);
+                    }
+                  }}
+                  onMouseEnter={() => setHoveredLevel(level)}
+                  onMouseLeave={() => setHoveredLevel(null)}
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-200 ${
+                    level === 1 || completedLevels.has(`${battleState.currentChapter}-${level - 1}`) 
+                      ? 'cursor-pointer hover:scale-110 hover:shadow-lg' 
+                      : 'cursor-not-allowed'
+                  } ${bgColor} ${textColor}`}
+                  title={
+                    level === 1 || completedLevels.has(`${battleState.currentChapter}-${level - 1}`)
+                      ? level === battleState.currentLevel
+                        ? `Currently on Chapter ${battleState.currentChapter} Level ${level}`
+                        : `Click to switch to Chapter ${battleState.currentChapter} Level ${level}`
+                      : `Complete Chapter ${battleState.currentChapter} Level ${level - 1} first to unlock Level ${level}`
+                  }
                 >
                   {level}
                 </div>
               );
             })}
           </div>
+          
+          {/* Drop Rate Tooltip */}
+          {hoveredLevel && (
+            <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 z-50">
+              <DropRateDisplay currentLevel={hoveredLevel} />
+            </div>
+          )}
         </div>
       </div>
     </div>

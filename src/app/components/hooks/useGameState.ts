@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 // Types
 export interface Resources {
@@ -13,6 +13,7 @@ export interface GameState {
   cityTier: number;
   populationCapacity: number;
   recruitedGenerals: string[];
+  farmCount: number;
 }
 
 export const useGameState = () => {
@@ -26,6 +27,20 @@ export const useGameState = () => {
   const [cityTier, setCityTier] = useState(1);
   const [populationCapacity, setPopulationCapacity] = useState(100);
   const [recruitedGenerals, setRecruitedGenerals] = useState<string[]>([]);
+  const [farmCount, setFarmCount] = useState(0);
+
+  // Automatic resource generation
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setResources(prev => ({
+        ...prev,
+        gold: prev.gold + Math.floor(cityTier * 2), // 2 gold per second per city tier
+        food: prev.food + Math.floor(cityTier * 1.5) + Math.floor(farmCount * 8.33) // 1.5 food per second per city tier + 500 food per minute per farm
+      }));
+    }, 1000); // Update every second
+
+    return () => clearInterval(interval);
+  }, [cityTier, farmCount]);
 
   // Update resources
   const updateResources = (updates: Partial<Resources>) => {
@@ -63,13 +78,24 @@ export const useGameState = () => {
   // Upgrade city
   const upgradeCity = (): boolean => {
     const nextTier = cityTier + 1;
-    const goldCost = nextTier * 50000;
-    const foodCost = nextTier * 30000;
+    const goldCost = nextTier * 5000;
+    const foodCost = nextTier * 3000;
     const newPopulationCapacity = nextTier * 100;
     
     if (spendGold(goldCost) && spendFood(foodCost)) {
       setCityTier(nextTier);
       setPopulationCapacity(newPopulationCapacity);
+      return true;
+    }
+    return false;
+  };
+
+  // Purchase farm
+  const purchaseFarm = (): boolean => {
+    const farmCost = 50000; // 50k gold per farm
+    
+    if (spendGold(farmCost)) {
+      setFarmCount(prev => prev + 1);
       return true;
     }
     return false;
@@ -133,6 +159,7 @@ export const useGameState = () => {
     cityTier,
     populationCapacity,
     recruitedGenerals,
+    farmCount,
     
     // Actions
     updateResources,
@@ -141,6 +168,7 @@ export const useGameState = () => {
     addFood,
     spendFood,
     upgradeCity,
+    purchaseFarm,
     recruitGeneral,
     removeGeneral,
     getCurrentPopulationUsed,

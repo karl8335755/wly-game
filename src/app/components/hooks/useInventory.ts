@@ -8,7 +8,7 @@ export interface InventoryItem {
   type: 'weapon' | 'armor';
   attackBonus: number;
   healthBonus: number;
-  rarity: 'common' | 'rare' | 'epic' | 'legendary' | 'mythic';
+  rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' | 'mythic';
   specialEffect?: 'aoe';
   originalOwner: string;
   uniqueId?: string;
@@ -28,7 +28,22 @@ export const useInventory = () => {
     [heroName: string]: InventoryItem[]
   }>({});
 
-  const [heroEquippedGear, setHeroEquippedGear] = useState<HeroEquippedGear>({});
+  const [heroEquippedGear, setHeroEquippedGear] = useState<HeroEquippedGear>({
+    '刘备': {
+      weapon: {
+        id: 'legendary_sword_1',
+        name: 'Excalibur',
+        type: 'weapon',
+        attackBonus: 50,
+        healthBonus: 20,
+        rarity: 'legendary',
+        specialEffect: 'aoe',
+        originalOwner: '刘备',
+        uniqueId: 'test_excalibur_liubei'
+      },
+      armor: null
+    }
+  });
   const [sellMessage, setSellMessage] = useState<string>('');
 
   const INVENTORY_SLOTS = 20;
@@ -56,8 +71,8 @@ export const useInventory = () => {
     );
     
     return uniqueItems.sort((a, b) => {
-      // Sort by rarity first (mythic > legendary > epic > rare > common)
-      const rarityOrder = { mythic: 5, legendary: 4, epic: 3, rare: 2, common: 1 };
+      // Sort by rarity first (mythic > legendary > epic > rare > uncommon > common)
+      const rarityOrder = { mythic: 6, legendary: 5, epic: 4, rare: 3, uncommon: 2, common: 1 };
       const rarityDiff = rarityOrder[b.rarity] - rarityOrder[a.rarity];
       if (rarityDiff !== 0) return rarityDiff;
       
@@ -77,7 +92,7 @@ export const useInventory = () => {
   const addItemToInventory = (item: InventoryItem) => {
     const allItems = getAllItems();
     if (allItems.length >= INVENTORY_SLOTS) {
-      setSellMessage('📦 Inventory full! Cannot collect more items.');
+      setSellMessage('Inventory full!');
       setTimeout(() => setSellMessage(''), 3000);
       return false;
     }
@@ -100,6 +115,16 @@ export const useInventory = () => {
     
     if (duplicateByProperties) {
       return false;
+    }
+
+    // Auto-sell logic: Check if item is worse than equipped gear
+    const shouldAutoSell = shouldAutoSellItem(item);
+    if (shouldAutoSell) {
+      const rarityValues = { common: 150, uncommon: 300, rare: 600, epic: 1200, legendary: 3000, mythic: 7500 };
+      const sellValue = rarityValues[item.rarity];
+      setSellMessage(`Sold ${item.name} +${sellValue}g`);
+      setTimeout(() => setSellMessage(''), 3000);
+      return { autoSold: true, value: sellValue };
     }
     
     // Only generate uniqueId if it doesn't already exist
@@ -125,7 +150,43 @@ export const useInventory = () => {
       return updated;
     });
 
-    return true;
+    return { autoSold: false, value: 0 };
+  };
+
+  // Check if item should be auto-sold
+  const shouldAutoSellItem = (item: InventoryItem): boolean => {
+    // If no heroes have equipped gear, don't auto-sell
+    if (Object.keys(heroEquippedGear).length === 0) {
+      return false;
+    }
+
+    // Check if item is worse than ALL heroes' equipped gear of the same type
+    const itemType = item.type; // 'weapon' or 'armor'
+    const itemTotalStats = item.attackBonus + item.healthBonus;
+    const rarityOrder = { common: 1, uncommon: 2, rare: 3, epic: 4, legendary: 5, mythic: 6 };
+    const itemRarity = rarityOrder[item.rarity] || 1;
+
+    // Check each hero's equipped gear
+    for (const [heroName, gear] of Object.entries(heroEquippedGear)) {
+      const equippedItem = gear[itemType]; // weapon or armor
+      
+      if (equippedItem) {
+        const equippedTotalStats = equippedItem.attackBonus + equippedItem.healthBonus;
+        const equippedRarity = rarityOrder[equippedItem.rarity] || 1;
+
+        // If equipped item has better stats AND rarity, auto-sell the new item
+        if (equippedTotalStats > itemTotalStats && equippedRarity >= itemRarity) {
+          return true;
+        }
+        
+        // If stats are equal but equipped item has higher rarity, auto-sell
+        if (equippedTotalStats === itemTotalStats && equippedRarity > itemRarity) {
+          return true;
+        }
+      }
+    }
+
+    return false;
   };
 
   // Equip item to hero
@@ -165,7 +226,7 @@ export const useInventory = () => {
       return newEquippedGear;
     });
 
-    setSellMessage(`⚔️ ${item.name} equipped to ${heroName}!`);
+    setSellMessage(`Equipped ${item.name}`);
     setTimeout(() => setSellMessage(''), 3000);
   };
 
@@ -198,7 +259,7 @@ export const useInventory = () => {
 
   // Sell a single item
   const sellItem = (itemToSell: InventoryItem) => {
-    const rarityValues = { common: 10, rare: 25, epic: 50, legendary: 100, mythic: 200 };
+    const rarityValues = { common: 150, uncommon: 300, rare: 600, epic: 1200, legendary: 3000, mythic: 7500 };
     const itemValue = rarityValues[itemToSell.rarity];
     
     // Remove item from inventory
@@ -213,7 +274,7 @@ export const useInventory = () => {
       return newInventories;
     });
     
-    setSellMessage(`💰 Sold ${itemToSell.name} for ${itemValue} gold!`);
+    setSellMessage(`Sold ${itemToSell.name} +${itemValue}g`);
     setTimeout(() => setSellMessage(''), 3000);
     
     return itemValue;
@@ -223,20 +284,20 @@ export const useInventory = () => {
   const sellAllItems = () => {
     const allItems = getAllItems();
     if (allItems.length === 0) {
-      setSellMessage('📦 No items to sell!');
+      setSellMessage('No items to sell');
       setTimeout(() => setSellMessage(''), 3000);
       return 0;
     }
 
     const totalValue = allItems.reduce((sum, item) => {
-      const rarityValues = { common: 10, rare: 25, epic: 50, legendary: 100, mythic: 200 };
+      const rarityValues = { common: 150, uncommon: 300, rare: 600, epic: 1200, legendary: 3000, mythic: 7500 };
       return sum + rarityValues[item.rarity];
     }, 0);
 
     // Clear all inventories
     setHeroInventories({});
     
-    setSellMessage(`💰 Sold all items for ${totalValue} gold!`);
+    setSellMessage(`Sold all +${totalValue}g`);
     setTimeout(() => setSellMessage(''), 4000);
 
     return totalValue;
@@ -296,6 +357,7 @@ export const useInventory = () => {
     sellAllItems,
     isItemEquipped,
     getEquippedBy,
+    shouldAutoSellItem,
     INVENTORY_SLOTS
   };
 };

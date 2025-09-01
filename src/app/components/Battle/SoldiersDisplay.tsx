@@ -10,6 +10,17 @@ export const SoldiersDisplay: React.FC<SoldiersDisplayProps> = ({ soldiers, curr
   const [attackingYellowTurbans, setAttackingYellowTurbans] = useState<Set<number>>(new Set());
   const [takingDamage, setTakingDamage] = useState<Set<number>>(new Set());
 
+  // Helper function to get max HP for current level
+  const getMaxHP = (level: number) => {
+    if (level < 6) {
+      return 100; // Levels 1-5: 100 HP
+    } else if (level < 10) {
+      return 100 * Math.pow(2, level - 5); // Levels 6-9: 200, 400, 800, 1600
+    } else {
+      return 5000; // Level 10: Boss with 5000 HP
+    }
+  };
+
   // Simulate attack animation when 黄巾军 are attacking
   useEffect(() => {
     const interval = setInterval(() => {
@@ -30,7 +41,9 @@ export const SoldiersDisplay: React.FC<SoldiersDisplayProps> = ({ soldiers, curr
 
   return (
     <div className="bg-gray-800/90 rounded-lg p-4 h-full flex flex-col">
-      <h2 className="text-lg font-bold text-white mb-3">黄巾军 (Level {currentLevel})</h2>
+      <h2 className="text-lg font-bold text-white mb-3">
+        {currentLevel === 10 ? 'BOSS' : '黄巾军'} (Level {currentLevel})
+      </h2>
       <div className="grid grid-cols-5 gap-2 max-h-96 overflow-y-auto flex-1">
         {soldiers.map((health, index) => {
           const isAttacking = attackingYellowTurbans.has(index);
@@ -62,10 +75,10 @@ export const SoldiersDisplay: React.FC<SoldiersDisplayProps> = ({ soldiers, curr
               )}
 
               <Image
-                src="/soldier.png"
-                alt="Soldier"
-                width={48}
-                height={48}
+                src={currentLevel === 10 ? "/boss.jpeg" : "/soldier.png"}
+                alt={currentLevel === 10 ? "Boss" : "Soldier"}
+                width={currentLevel === 10 ? 64 : 48}
+                height={currentLevel === 10 ? 64 : 48}
                 className={`mx-auto mb-1 transition-all duration-200 ${
                   health <= 0 ? 'grayscale' : ''
                 } ${
@@ -74,17 +87,19 @@ export const SoldiersDisplay: React.FC<SoldiersDisplayProps> = ({ soldiers, curr
                   isTakingDamage ? 'scale-95' : ''
                 }`}
               />
-              <div className="text-xs text-gray-300">黄巾军 {index + 1}</div>
+              <div className="text-xs text-gray-300">
+                {currentLevel === 10 ? 'BOSS' : `黄巾军 ${index + 1}`}
+              </div>
               
               {/* Health Bar */}
               <div className="w-full bg-gray-600 rounded-full h-2 mt-1">
                 <div
                   className={`h-2 rounded-full transition-all duration-200 ${
                     health <= 0 ? 'bg-red-500' : 
-                    health > 50 ? 'bg-green-500' : 
-                    health > 25 ? 'bg-yellow-500' : 'bg-red-500'
+                    health > (getMaxHP(currentLevel) * 0.5) ? 'bg-green-500' : 
+                    health > (getMaxHP(currentLevel) * 0.25) ? 'bg-yellow-500' : 'bg-red-500'
                   }`}
-                  style={{ width: `${health > 0 ? (health / 100) * 100 : 0}%` }}
+                  style={{ width: `${health > 0 ? (health / getMaxHP(currentLevel)) * 100 : 0}%` }}
                 />
               </div>
               
