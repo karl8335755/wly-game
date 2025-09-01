@@ -4,21 +4,28 @@ import Image from 'next/image';
 interface SoldiersDisplayProps {
   soldiers: number[];
   currentLevel: number;
+  currentChapter: number;
 }
 
-export const SoldiersDisplay: React.FC<SoldiersDisplayProps> = ({ soldiers, currentLevel }) => {
+export const SoldiersDisplay: React.FC<SoldiersDisplayProps> = ({ soldiers, currentLevel, currentChapter }) => {
   const [attackingYellowTurbans, setAttackingYellowTurbans] = useState<Set<number>>(new Set());
   const [takingDamage, setTakingDamage] = useState<Set<number>>(new Set());
 
-  // Helper function to get max HP for current level
-  const getMaxHP = (level: number) => {
+  // Helper function to get max HP for current level and chapter
+  const getMaxHP = (level: number, chapter: number) => {
+    // Chapter multiplier for HP scaling (same as in useBattle hook)
+    const chapterMultiplier = Math.pow(1.5, chapter - 1);
+    
+    let baseHP: number;
     if (level < 6) {
-      return 100; // Levels 1-5: 100 HP
+      baseHP = 100; // Levels 1-5: 100 HP base
     } else if (level < 10) {
-      return 100 * Math.pow(2, level - 5); // Levels 6-9: 200, 400, 800, 1600
+      baseHP = 100 * Math.pow(2, level - 5); // Levels 6-9: 200, 400, 800, 1600 base
     } else {
-      return 5000; // Level 10: Boss with 5000 HP
+      baseHP = 5000; // Level 10: Boss with 5000 HP base
     }
+    
+    return Math.floor(baseHP * chapterMultiplier);
   };
 
   // Simulate attack animation when 黄巾军 are attacking
@@ -96,10 +103,10 @@ export const SoldiersDisplay: React.FC<SoldiersDisplayProps> = ({ soldiers, curr
                 <div
                   className={`h-2 rounded-full transition-all duration-200 ${
                     health <= 0 ? 'bg-red-500' : 
-                    health > (getMaxHP(currentLevel) * 0.5) ? 'bg-green-500' : 
-                    health > (getMaxHP(currentLevel) * 0.25) ? 'bg-yellow-500' : 'bg-red-500'
+                    health > (getMaxHP(currentLevel, currentChapter) * 0.5) ? 'bg-green-500' : 
+                    health > (getMaxHP(currentLevel, currentChapter) * 0.25) ? 'bg-yellow-500' : 'bg-red-500'
                   }`}
-                  style={{ width: `${health > 0 ? (health / getMaxHP(currentLevel)) * 100 : 0}%` }}
+                  style={{ width: `${health > 0 ? (health / getMaxHP(currentLevel, currentChapter)) * 100 : 0}%` }}
                 />
               </div>
               

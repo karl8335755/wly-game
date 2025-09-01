@@ -31,17 +31,27 @@ export const useInventory = () => {
   const [heroEquippedGear, setHeroEquippedGear] = useState<HeroEquippedGear>({
     '刘备': {
       weapon: {
-        id: 'legendary_sword_1',
-        name: 'Excalibur',
+        id: 'mythic_sword_5',
+        name: 'Ultimate Weapon',
         type: 'weapon',
-        attackBonus: 50,
-        healthBonus: 20,
-        rarity: 'legendary',
+        attackBonus: 300,
+        healthBonus: 150,
+        rarity: 'mythic',
         specialEffect: 'aoe',
         originalOwner: '刘备',
-        uniqueId: 'test_excalibur_liubei'
+        uniqueId: 'test_ultimate_weapon_liubei'
       },
-      armor: null
+      armor: {
+        id: 'mythic_armor_5',
+        name: 'Ultimate Armor',
+        type: 'armor',
+        attackBonus: 100,
+        healthBonus: 500,
+        rarity: 'mythic',
+        specialEffect: 'aoe',
+        originalOwner: '刘备',
+        uniqueId: 'test_ultimate_armor_liubei'
+      }
     }
   });
   const [sellMessage, setSellMessage] = useState<string>('');
@@ -156,37 +166,64 @@ export const useInventory = () => {
   // Check if item should be auto-sold
   const shouldAutoSellItem = (item: InventoryItem): boolean => {
     // If no heroes have equipped gear, don't auto-sell
-    if (Object.keys(heroEquippedGear).length === 0) {
+    if (!heroEquippedGear || Object.keys(heroEquippedGear).length === 0) {
       return false;
     }
 
-    // Check if item is worse than ALL heroes' equipped gear of the same type
     const itemType = item.type; // 'weapon' or 'armor'
     const itemTotalStats = item.attackBonus + item.healthBonus;
     const rarityOrder = { common: 1, uncommon: 2, rare: 3, epic: 4, legendary: 5, mythic: 6 };
     const itemRarity = rarityOrder[item.rarity] || 1;
 
-    // Check each hero's equipped gear
-    for (const [heroName, gear] of Object.entries(heroEquippedGear)) {
+    // Check if ANY hero could benefit from this item
+    let couldBeUpgrade = false;
+    let isWorseThanAll = true;
+
+    for (const [heroName, gear] of Object.entries(heroEquippedGear || {})) {
       const equippedItem = gear[itemType]; // weapon or armor
       
-      if (equippedItem) {
-        const equippedTotalStats = equippedItem.attackBonus + equippedItem.healthBonus;
-        const equippedRarity = rarityOrder[equippedItem.rarity] || 1;
+      if (!equippedItem) {
+        // Hero has no equipped item of this type - this is definitely an upgrade
+        couldBeUpgrade = true;
+        isWorseThanAll = false;
+        break;
+      }
 
-        // If equipped item has better stats AND rarity, auto-sell the new item
-        if (equippedTotalStats > itemTotalStats && equippedRarity >= itemRarity) {
-          return true;
+      const equippedTotalStats = equippedItem.attackBonus + equippedItem.healthBonus;
+      const equippedRarity = rarityOrder[equippedItem.rarity] || 1;
+
+      // Check if this item could be an upgrade for this hero
+      if (itemTotalStats > equippedTotalStats) {
+        // Better stats - could be an upgrade
+        couldBeUpgrade = true;
+        isWorseThanAll = false;
+      } else if (itemTotalStats === equippedTotalStats && itemRarity > equippedRarity) {
+        // Same stats but higher rarity - could be an upgrade
+        couldBeUpgrade = true;
+        isWorseThanAll = false;
+      } else if (itemTotalStats === equippedTotalStats && itemRarity === equippedRarity) {
+        // Same stats and rarity - check special effects
+        if (item.specialEffect && !equippedItem.specialEffect) {
+          // New item has special effect, equipped doesn't - could be upgrade
+          couldBeUpgrade = true;
+          isWorseThanAll = false;
+        } else if (item.specialEffect === equippedItem.specialEffect) {
+          // Same special effects - not worse, could be useful
+          isWorseThanAll = false;
         }
-        
-        // If stats are equal but equipped item has higher rarity, auto-sell
-        if (equippedTotalStats === itemTotalStats && equippedRarity > itemRarity) {
-          return true;
-        }
+        // If no special effects or equipped has special effect but new doesn't, continue checking
+      } else if (itemTotalStats < equippedTotalStats && itemRarity < equippedRarity) {
+        // Worse stats AND lower rarity - this is worse for this hero
+        // Continue checking other heroes
+      } else {
+        // Mixed case (e.g., lower stats but higher rarity) - could be useful
+        isWorseThanAll = false;
       }
     }
 
-    return false;
+    // Only auto-sell if the item is worse than ALL heroes' equipped gear
+    // AND no hero could benefit from it
+    return isWorseThanAll && !couldBeUpgrade;
   };
 
   // Equip item to hero
@@ -305,14 +342,14 @@ export const useInventory = () => {
 
   // Check if item is equipped
   const isItemEquipped = (item: InventoryItem): boolean => {
-    return Object.values(heroEquippedGear).some(gear => 
+    return Object.values(heroEquippedGear || {}).some(gear => 
       gear.weapon?.uniqueId === item.uniqueId || gear.armor?.uniqueId === item.uniqueId
     );
   };
 
   // Get hero that has item equipped
   const getEquippedBy = (item: InventoryItem): string | null => {
-    for (const [heroName, gear] of Object.entries(heroEquippedGear)) {
+    for (const [heroName, gear] of Object.entries(heroEquippedGear || {})) {
       if (gear.weapon?.uniqueId === item.uniqueId || gear.armor?.uniqueId === item.uniqueId) {
         return heroName;
       }

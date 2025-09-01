@@ -36,7 +36,7 @@ const heroData = [
 
 
 
-export const useBattle = (heroEquippedGear: { [heroName: string]: { weapon: any; armor: any } }) => {
+export const useBattle = (heroEquippedGear: { [heroName: string]: { weapon: any; armor: any } } = {}) => {
   // Helper function to calculate enemy configuration for a given level and chapter
   const getEnemyConfig = (level: number, chapter: number = 1) => {
     // Chapter multiplier for HP and damage scaling
@@ -239,7 +239,7 @@ export const useBattle = (heroEquippedGear: { [heroName: string]: { weapon: any;
             }
             
             // Check if hero has AOE weapon or armor equipped
-            const heroGear = heroEquippedGear[hero.name] || {};
+            const heroGear = (heroEquippedGear && heroEquippedGear[hero.name]) || {};
             const hasAOEWeapon = heroGear.weapon?.specialEffect === 'aoe';
             const hasAOEArmor = heroGear.armor?.specialEffect === 'aoe';
             
@@ -339,7 +339,7 @@ export const useBattle = (heroEquippedGear: { [heroName: string]: { weapon: any;
       if (allCurrentItems && allCurrentItems.length >= 20) {
         newBattleLog.push('Inventory full! No more items can be collected.');
       } else {
-        const dropRates = getDropRates(newCurrentLevel, currentChapter);
+        const dropRates = getDropRates(newCurrentLevel, currentState.currentChapter);
         const baseDropChance = 0.3; // 30% chance per defeated enemy
         
         // Check each defeated enemy for loot
@@ -406,7 +406,7 @@ export const useBattle = (heroEquippedGear: { [heroName: string]: { weapon: any;
       // Reset to level 1 and heal all heroes with gear bonuses
       const resetHeroes = newHeroes.map(hero => {
         const baseHero = heroData.find(h => h.name === hero.name);
-        const heroGear = heroEquippedGear[hero.name] || {};
+        const heroGear = (heroEquippedGear && heroEquippedGear[hero.name]) || {};
         
         // Calculate gear bonuses
         const weaponBonus = heroGear.weapon?.attackBonus || 0;
@@ -468,7 +468,7 @@ export const useBattle = (heroEquippedGear: { [heroName: string]: { weapon: any;
     // Initialize heroes in battle with equipped gear bonuses
     const initialHeroes = recruitedGenerals.map(heroName => {
       const hero = heroData.find(h => h.name === heroName);
-      const heroGear = heroEquippedGear[heroName] || {};
+      const heroGear = (heroEquippedGear && heroEquippedGear[heroName]) || {};
       
       // Calculate gear bonuses
       const weaponBonus = heroGear.weapon?.attackBonus || 0;
@@ -477,14 +477,31 @@ export const useBattle = (heroEquippedGear: { [heroName: string]: { weapon: any;
       const baseHealth = hero?.health || 100;
       const baseAttack = hero?.attackPower || 20;
       
+      // Special testing setup for 刘备
+      const isLiubei = heroName === '刘备';
+      const startingLevel = isLiubei ? 100 : 1;
+      const startingExperience = isLiubei ? 0 : 0;
+      const experienceToNext = isLiubei ? 1000 : 10;
+      
+      // Calculate level-based stat increases for 刘备
+      let levelBonusAttack = 0;
+      let levelBonusHealth = 0;
+      if (isLiubei) {
+        // Calculate accumulated stats from level 1 to 100
+        for (let level = 1; level <= 100; level++) {
+          levelBonusAttack += Math.floor(3 + (level * 0.5)); // 3-8 attack per level
+          levelBonusHealth += Math.floor(15 + (level * 2)); // 15-35 HP per level
+        }
+      }
+      
       return {
         name: heroName,
-        health: baseHealth + armorBonus,
-        maxHealth: baseHealth + armorBonus,
-        attackPower: baseAttack + weaponBonus,
-        level: 1,
-        experience: 0,
-        experienceToNextLevel: 10
+        health: baseHealth + armorBonus + levelBonusHealth,
+        maxHealth: baseHealth + armorBonus + levelBonusHealth,
+        attackPower: baseAttack + weaponBonus + levelBonusAttack,
+        level: startingLevel,
+        experience: startingExperience,
+        experienceToNextLevel: experienceToNext
       };
     });
     
@@ -518,7 +535,7 @@ export const useBattle = (heroEquippedGear: { [heroName: string]: { weapon: any;
   }, [gameLoop]);
 
   // Next level function
-  const nextLevel = useCallback((onLootDrop: (item: any) => any[] | void) => {
+  const nextLevel = useCallback((onLootDrop: (item: any) => any[] | void, recruitedGenerals: string[] = []) => {
     // Store the onLootDrop callback for use in toggleSpeed
     onLootDropRef.current = onLootDrop;
     // Check if current level is completed before allowing progression
@@ -533,6 +550,48 @@ export const useBattle = (heroEquippedGear: { [heroName: string]: { weapon: any;
     if (battleState.gameLoopId) {
       clearInterval(battleState.gameLoopId);
     }
+    
+    // Reinitialize heroes with current recruited generals
+    const updatedHeroes = recruitedGenerals.map(heroName => {
+      const hero = heroData.find(h => h.name === heroName);
+      const heroGear = (heroEquippedGear && heroEquippedGear[heroName]) || {};
+      
+      // Calculate gear bonuses
+      const weaponBonus = heroGear.weapon?.attackBonus || 0;
+      const armorBonus = heroGear.armor?.healthBonus || 0;
+      
+      const baseHealth = hero?.health || 100;
+      const baseAttack = hero?.attackPower || 20;
+      
+      // Special testing setup for 刘备
+      const isLiubei = heroName === '刘备';
+      const startingLevel = isLiubei ? 100 : 1;
+      const startingExperience = isLiubei ? 0 : 0;
+      const experienceToNext = isLiubei ? 1000 : 10;
+      
+      // Calculate level-based stat increases for 刘备
+      let levelBonusAttack = 0;
+      let levelBonusHealth = 0;
+      if (isLiubei) {
+        // Calculate accumulated stats from level 1 to 100
+        for (let level = 1; level <= 100; level++) {
+          levelBonusAttack += Math.floor(3 + (level * 0.5)); // 3-8 attack per level
+          levelBonusHealth += Math.floor(15 + (level * 2)); // 15-35 HP per level
+        }
+      }
+      
+      return {
+        name: heroName,
+        health: baseHealth + armorBonus + levelBonusHealth,
+        maxHealth: baseHealth + armorBonus + levelBonusHealth,
+        attackPower: baseAttack + weaponBonus + levelBonusAttack,
+        level: startingLevel,
+        experience: startingExperience,
+        experienceToNextLevel: experienceToNext
+      };
+    });
+    
+    setHeroesInBattle(updatedHeroes);
     
     const interval = battleState.speed === 1 ? 2000 : 1000; // 1x = 2s, 2x = 1s
     const gameLoopId = setInterval(() => gameLoop(onLootDrop), interval);
@@ -549,7 +608,7 @@ export const useBattle = (heroEquippedGear: { [heroName: string]: { weapon: any;
   }, [battleState.currentLevel, battleState.gameLoopId, gameLoop, completedLevels]);
 
   // Change to specific level function
-  const changeToLevel = useCallback((targetLevel: number, onLootDrop: (item: any) => any[] | void) => {
+  const changeToLevel = useCallback((targetLevel: number, onLootDrop: (item: any) => any[] | void, recruitedGenerals: string[] = []) => {
     // Store the onLootDrop callback for use in toggleSpeed
     onLootDropRef.current = onLootDrop;
     
@@ -565,6 +624,48 @@ export const useBattle = (heroEquippedGear: { [heroName: string]: { weapon: any;
     if (battleState.gameLoopId) {
       clearInterval(battleState.gameLoopId);
     }
+    
+    // Reinitialize heroes with current recruited generals
+    const updatedHeroes = recruitedGenerals.map(heroName => {
+      const hero = heroData.find(h => h.name === heroName);
+      const heroGear = (heroEquippedGear && heroEquippedGear[heroName]) || {};
+      
+      // Calculate gear bonuses
+      const weaponBonus = heroGear.weapon?.attackBonus || 0;
+      const armorBonus = heroGear.armor?.healthBonus || 0;
+      
+      const baseHealth = hero?.health || 100;
+      const baseAttack = hero?.attackPower || 20;
+      
+      // Special testing setup for 刘备
+      const isLiubei = heroName === '刘备';
+      const startingLevel = isLiubei ? 100 : 1;
+      const startingExperience = isLiubei ? 0 : 0;
+      const experienceToNext = isLiubei ? 1000 : 10;
+      
+      // Calculate level-based stat increases for 刘备
+      let levelBonusAttack = 0;
+      let levelBonusHealth = 0;
+      if (isLiubei) {
+        // Calculate accumulated stats from level 1 to 100
+        for (let level = 1; level <= 100; level++) {
+          levelBonusAttack += Math.floor(3 + (level * 0.5)); // 3-8 attack per level
+          levelBonusHealth += Math.floor(15 + (level * 2)); // 15-35 HP per level
+        }
+      }
+      
+      return {
+        name: heroName,
+        health: baseHealth + armorBonus + levelBonusHealth,
+        maxHealth: baseHealth + armorBonus + levelBonusHealth,
+        attackPower: baseAttack + weaponBonus + levelBonusAttack,
+        level: startingLevel,
+        experience: startingExperience,
+        experienceToNextLevel: experienceToNext
+      };
+    });
+    
+    setHeroesInBattle(updatedHeroes);
     
     // Calculate soldier configuration for target level
     const enemyConfig = getEnemyConfig(targetLevel, currentChapter);
@@ -620,6 +721,50 @@ export const useBattle = (heroEquippedGear: { [heroName: string]: { weapon: any;
     }));
   }, [battleState.gameLoopId]);
 
+  // Refresh heroes in battle with current recruited generals
+  const refreshHeroesInBattle = useCallback((recruitedGenerals: string[]) => {
+    const updatedHeroes = recruitedGenerals.map(heroName => {
+      const hero = heroData.find(h => h.name === heroName);
+      const heroGear = (heroEquippedGear && heroEquippedGear[heroName]) || {};
+      
+      // Calculate gear bonuses
+      const weaponBonus = heroGear.weapon?.attackBonus || 0;
+      const armorBonus = heroGear.armor?.healthBonus || 0;
+      
+      const baseHealth = hero?.health || 100;
+      const baseAttack = hero?.attackPower || 20;
+      
+      // Special testing setup for 刘备
+      const isLiubei = heroName === '刘备';
+      const startingLevel = isLiubei ? 100 : 1;
+      const startingExperience = isLiubei ? 0 : 0;
+      const experienceToNext = isLiubei ? 1000 : 10;
+      
+      // Calculate level-based stat increases for 刘备
+      let levelBonusAttack = 0;
+      let levelBonusHealth = 0;
+      if (isLiubei) {
+        // Calculate accumulated stats from level 1 to 100
+        for (let level = 1; level <= 100; level++) {
+          levelBonusAttack += Math.floor(3 + (level * 0.5)); // 3-8 attack per level
+          levelBonusHealth += Math.floor(15 + (level * 2)); // 15-35 HP per level
+        }
+      }
+      
+      return {
+        name: heroName,
+        health: baseHealth + armorBonus + levelBonusHealth,
+        maxHealth: baseHealth + armorBonus + levelBonusHealth,
+        attackPower: baseAttack + weaponBonus + levelBonusAttack,
+        level: startingLevel,
+        experience: startingExperience,
+        experienceToNextLevel: experienceToNext
+      };
+    });
+    
+    setHeroesInBattle(updatedHeroes);
+  }, []);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -638,6 +783,7 @@ export const useBattle = (heroEquippedGear: { [heroName: string]: { weapon: any;
     changeToLevel,
     stopBattle,
     toggleSpeed,
+    refreshHeroesInBattle,
     setBattleState
   };
 };

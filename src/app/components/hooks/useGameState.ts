@@ -26,7 +26,7 @@ export const useGameState = () => {
 
   const [cityTier, setCityTier] = useState(1);
   const [populationCapacity, setPopulationCapacity] = useState(100);
-  const [recruitedGenerals, setRecruitedGenerals] = useState<string[]>([]);
+  const [recruitedGenerals, setRecruitedGenerals] = useState<string[]>(['刘备']);
   const [farmCount, setFarmCount] = useState(0);
 
   // Automatic resource generation
@@ -82,7 +82,11 @@ export const useGameState = () => {
     const foodCost = nextTier * 3000;
     const newPopulationCapacity = nextTier * 100;
     
-    if (spendGold(goldCost) && spendFood(foodCost)) {
+    // Check if we have enough resources before spending them
+    if (resources.gold >= goldCost && resources.food >= foodCost) {
+      // Spend resources only if we have enough
+      spendGold(goldCost);
+      spendFood(foodCost);
       setCityTier(nextTier);
       setPopulationCapacity(newPopulationCapacity);
       return true;
@@ -94,7 +98,9 @@ export const useGameState = () => {
   const purchaseFarm = (): boolean => {
     const farmCost = 50000; // 50k gold per farm
     
-    if (spendGold(farmCost)) {
+    // Check if we have enough gold before spending
+    if (resources.gold >= farmCost) {
+      spendGold(farmCost);
       setFarmCount(prev => prev + 1);
       return true;
     }
@@ -116,14 +122,12 @@ export const useGameState = () => {
       return total + (heroPopulationCosts[general] || 20);
     }, 0);
     
-    // Check if we have enough gold and population capacity
-    if (spendGold(cost) && (currentPopulationUsed + populationCost <= populationCapacity)) {
+    // Check if we have enough gold and population capacity before spending
+    if (resources.gold >= cost && (currentPopulationUsed + populationCost <= populationCapacity)) {
+      // Spend gold only if all checks pass
+      spendGold(cost);
       setRecruitedGenerals(prev => [...prev, heroName]);
       return true;
-    } else if (currentPopulationUsed + populationCost > populationCapacity) {
-      // Refund the gold if population check fails
-      addGold(cost);
-      return false;
     }
     return false;
   };

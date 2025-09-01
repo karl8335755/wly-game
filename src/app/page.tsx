@@ -22,9 +22,11 @@ export default function Home() {
     cityTier,
     populationCapacity,
     recruitedGenerals,
+    farmCount,
     addGold,
     addFood,
     upgradeCity,
+    purchaseFarm,
     recruitGeneral,
     getCurrentPopulationUsed,
     changeScreen
@@ -50,8 +52,9 @@ export default function Home() {
     nextLevel,
     changeToLevel,
     stopBattle,
-    toggleSpeed
-  } = useBattle();
+    toggleSpeed,
+    refreshHeroesInBattle
+  } = useBattle(heroEquippedGear);
 
   // Handle loot drops from battle
   const handleLootDrop = (item: any) => {
@@ -91,6 +94,18 @@ export default function Home() {
     return success;
   };
 
+  // Handle hero recruitment
+  const handleRecruitGeneral = (heroName: string, cost: number) => {
+    return recruitGeneral(heroName, cost);
+  };
+
+  // Refresh heroes in battle when recruitedGenerals changes
+  React.useEffect(() => {
+    if (recruitedGenerals.length > 0) {
+      refreshHeroesInBattle(recruitedGenerals);
+    }
+  }, [recruitedGenerals, refreshHeroesInBattle]);
+
   // Handle battle start
   const handleStartBattle = () => {
     startBattle(recruitedGenerals, handleLootDrop);
@@ -98,12 +113,12 @@ export default function Home() {
 
   // Handle next level
   const handleNextLevel = () => {
-    nextLevel(handleLootDrop);
+    nextLevel(handleLootDrop, recruitedGenerals);
   };
 
   // Handle change to specific level
   const handleChangeToLevel = (level: number) => {
-    changeToLevel(level, handleLootDrop);
+    changeToLevel(level, handleLootDrop, recruitedGenerals);
   };
 
   // Handle back to city
@@ -139,14 +154,15 @@ export default function Home() {
             populationCapacity={populationCapacity}
             currentPopulationUsed={getCurrentPopulationUsed()}
             onUpgradeCity={handleUpgradeCity}
-            sellMessage={sellMessage}
+            farmCount={farmCount}
+            onPurchaseFarm={purchaseFarm}
           />
         )}
 
         {currentScreen === 'army' && (
           <ArmyScreen
             recruitedGenerals={recruitedGenerals}
-            onRecruitGeneral={recruitGeneral}
+            onRecruitGeneral={handleRecruitGeneral}
             resources={resources}
           />
         )}

@@ -12,7 +12,8 @@ interface CityScreenProps {
   populationCapacity: number;
   currentPopulationUsed: number;
   onUpgradeCity: () => boolean;
-  sellMessage: string;
+  farmCount: number;
+  onPurchaseFarm: () => boolean;
 }
 
 export const CityScreen: React.FC<CityScreenProps> = ({
@@ -21,7 +22,8 @@ export const CityScreen: React.FC<CityScreenProps> = ({
   populationCapacity,
   currentPopulationUsed,
   onUpgradeCity,
-  sellMessage
+  farmCount,
+  onPurchaseFarm
 }) => {
   return (
     <div className="max-w-7xl mx-auto">
@@ -31,8 +33,9 @@ export const CityScreen: React.FC<CityScreenProps> = ({
         <CityDevelopment 
           cityTier={cityTier} 
           populationCapacity={populationCapacity}
+          farmCount={farmCount}
           onUpgradeCity={onUpgradeCity}
-          sellMessage={sellMessage}
+          onPurchaseFarm={onPurchaseFarm}
         />
       </div>
 

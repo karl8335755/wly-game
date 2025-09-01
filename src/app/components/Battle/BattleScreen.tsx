@@ -85,6 +85,7 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({
             <SoldiersDisplay 
               soldiers={battleState.soldiers}
               currentLevel={battleState.currentLevel}
+              currentChapter={battleState.currentChapter}
             />
           </div>
         </div>
